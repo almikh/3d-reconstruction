@@ -1,4 +1,4 @@
-#ifndef SESSION_H_INCLUDED__
+п»ї#ifndef SESSION_H_INCLUDED__
 #define SESSION_H_INCLUDED__
 #include <QtOpenGL>
 #include <QVector>
@@ -13,50 +13,52 @@
 class QGLWidget;
 
 namespace rn {
-	struct Session {
-	public:
-		typedef std::shared_ptr<Session> HardPtr;
+  struct Session {
+  public:
+    typedef std::shared_ptr<Session> HardPtr;
 
-	private:
-		QGLWidget* parent_;
-		QVector<QVector<Mesh::HardPtr>> backups_;
+  private:
+    QGLWidget* parent_;
+    QVector<QVector<Mesh::HardPtr>> backups_;
 
-		GLuint texture_;
-		GLuint gvf_texture_;
+    GLuint texture_;
+    GLuint gvf_texture_;
 
-		void checkOpenGLErrors();
+    void checkOpenGLErrors();
 
-	public:
-		vec2i offsets;
-		vec2i screen_size;
-		int slices, step; // параметры детализации меша
-		
-		QImage image;
-		std::shared_ptr<ip::Image<double>> gvf;
-		std::shared_ptr<ip::Image<double>> gvf_dir;
+  public:
+    vec2i offsets;
+    vec2i screen_size;
+    int slices, step; // РїР°СЂР°РјРµС‚СЂС‹ РґРµС‚Р°Р»РёР·Р°С†РёРё РјРµС€Р°
 
-		QVector<Mesh::HardPtr> meshes;
+    QImage image;
+    std::shared_ptr<ip::Image<double>> gvf;
+    std::shared_ptr<ip::Image<double>> gvf_dir;
 
-		QVector<vec2i> first_layer;
-		QVector<vec2i> last_layer;
+    QVector<Mesh::HardPtr> meshes;
 
-	public:
-		Session() = default;
-		Session(const QImage& image, QGLWidget* parent);
-		~Session();
-		
-		void invertStep();
-		void addMesh(Mesh::HardPtr mesh);
-		void setLastLayer(const QVector<vec2i>& layer);
-		void setFirstLayer(const QVector<vec2i>& layer);
+    QVector<vec2i> first_layer;
+    QVector<vec2i> last_layer;
 
-		int width() const;
-		int height() const;
-		vec2i screenCenter() const;
+  public:
+    QList<Mesh::HardPtr> selected_meshes;
 
-		GLuint texture() const;
-		GLuint gvfTexture() const;
-	};
+    Session() = default;
+    Session(const QImage& image, QGLWidget* parent);
+    ~Session();
+
+    void invertStep();
+    void addMesh(Mesh::HardPtr mesh);
+    void setLastLayer(const QVector<vec2i>& layer);
+    void setFirstLayer(const QVector<vec2i>& layer);
+
+    int width() const;
+    int height() const;
+    vec2i screenCenter() const;
+
+    GLuint texture() const;
+    GLuint gvfTexture() const;
+  };
 }
 
 #endif // SESSION_H_INCLUDED__

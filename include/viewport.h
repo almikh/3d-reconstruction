@@ -8,59 +8,67 @@
 
 #include <vec3.h>
 #include <session.h>
+#include <trackball.h>
 #include <model-creator.h>
 
 namespace rn
 {
-	class Trackball;
+  class Trackball;
 
-	struct triangle {
-		vec3d vertices[3];
+  struct triangle {
+    vec3d vertices[3];
 
-		triangle() = default;
-		triangle(vec3d x, vec3d y, vec3d z);
+    triangle() = default;
+    triangle(vec3d x, vec3d y, vec3d z);
 
-		vec3d& operator[](int index);
-		vec3d operator[](int index) const;
-	};
+    vec3d& operator[](int index);
+    vec3d operator[](int index) const;
+  };
 
-	using mesh_t = QVector<triangle>;
+  using mesh_t = QVector<triangle>;
 
-	class Viewport : public QGLWidget {
-		Q_OBJECT
+  class Viewport : public QGLWidget {
+    Q_OBJECT
 
-	protected:
-		QSize scene_size_;
-		Trackball* trackball_;
-		rn::Session::HardPtr session_;
+  protected:
+    QSize scene_size_;
+    rn::Session::HardPtr session_;
 
-		mesh_t makeCone(double radius, double height, int slices = 36);
-		mesh_t makeCylinder(double radius, double height, int slices = 36);
+    mesh_t makeCone(double radius, double height, int slices = 36);
+    mesh_t makeCylinder(double radius, double height, int slices = 36);
 
-		void drawMesh(const mesh_t& mesh);
-		void drawAxis();
+    void drawMesh(const mesh_t& mesh);
+    void drawAxis();
 
-	public:
-		std::shared_ptr<ModelCreator> model_creator;
+  public:
+    Trackball::HardPtr trackball;
+    QVector<QPoint> selected_area;
+    std::shared_ptr<ModelCreator> model_creator;
 
-		explicit Viewport(QWidget* parent = nullptr);
-		virtual ~Viewport(void);
+    explicit Viewport(QWidget* parent = nullptr);
+    virtual ~Viewport(void);
 
-		void setSession(rn::Session::HardPtr session);
+    void setSession(rn::Session::HardPtr session);
 
-		void initializeGL();
-		void resizeGL(int width, int height);
-		void paintGL();
-		void updateView();
+    void initializeGL() override;
+    void resizeGL(int width, int height) override;
+    void paintGL() override;
+    void updateView();
 
-		void wheelEvent(QWheelEvent* event) override;
-		void mouseMoveEvent(QMouseEvent* ev) override;
-		void mousePressEvent(QMouseEvent* ev) override;
-		void mouseReleaseEvent(QMouseEvent* ev) override;
+    void wheelEvent(QWheelEvent* event) override;
+    void mouseMoveEvent(QMouseEvent* ev) override;
+    void mousePressEvent(QMouseEvent* ev) override;
+    void mouseReleaseEvent(QMouseEvent* ev) override;
 
-		public slots:
-		void updateGL();
-	};
+  signals:
+    void signalWheelEvent(QWheelEvent* event);
+    void signalMouseMoveEvent(QMouseEvent* event);
+    void signalMousePressEvent(QMouseEvent* event);
+    void signalMouseReleaseEvent(QMouseEvent* event);
+
+  public slots:
+    void updateGL();
+  };
 }
 
 #endif // VIEWPORT_H_INCLUDED__

@@ -1,4 +1,4 @@
-#ifndef POINTS_MOVER_H_INCLUDED__
+п»ї#ifndef POINTS_MOVER_H_INCLUDED__
 #define POINTS_MOVER_H_INCLUDED__
 
 #include <memory>
@@ -9,28 +9,28 @@
 
 class PointsMover {
 protected:
-	int growth_length_; // величина роста
-	vec2d growth_dir_; // направление роста (нормир-е): после изменения на <dir> - происходит процесс изменения)
-	vec2d change_dir_; // направление изменения
-	vec2i offset_; // учитываемое смещение
-	bool look_ahead_; // заглядывать ли вперед, или нет
-	std::shared_ptr<ip::Image<double>> grad_; // поле модулей градиента
-	std::shared_ptr<ip::Image<double>> grad_dir_; // поле направлений градиента
-	QVector<QVector<vec2i>> prev_layers_; // все предыдущие точки (слои)
+  int growth_length_; // РІРµР»РёС‡РёРЅР° СЂРѕСЃС‚Р°
+  vec2d growth_dir_; // РЅР°РїСЂР°РІР»РµРЅРёРµ СЂРѕСЃС‚Р° (РЅРѕСЂРјРёСЂ-Рµ): РїРѕСЃР»Рµ РёР·РјРµРЅРµРЅРёСЏ РЅР° <dir> - РїСЂРѕРёСЃС…РѕРґРёС‚ РїСЂРѕС†РµСЃСЃ РёР·РјРµРЅРµРЅРёСЏ)
+  vec2d change_dir_; // РЅР°РїСЂР°РІР»РµРЅРёРµ РёР·РјРµРЅРµРЅРёСЏ
+  vec2i offset_; // СѓС‡РёС‚С‹РІР°РµРјРѕРµ СЃРјРµС‰РµРЅРёРµ
+  bool look_ahead_; // Р·Р°РіР»СЏРґС‹РІР°С‚СЊ Р»Рё РІРїРµСЂРµРґ, РёР»Рё РЅРµС‚
+  std::shared_ptr<ip::Image<double>> grad_; // РїРѕР»Рµ РјРѕРґСѓР»РµР№ РіСЂР°РґРёРµРЅС‚Р°
+  std::shared_ptr<ip::Image<double>> grad_dir_; // РїРѕР»Рµ РЅР°РїСЂР°РІР»РµРЅРёР№ РіСЂР°РґРёРµРЅС‚Р°
+  QVector<QVector<vec2i>> prev_layers_; // РІСЃРµ РїСЂРµРґС‹РґСѓС‰РёРµ С‚РѕС‡РєРё (СЃР»РѕРё)
 
 public:
-	virtual ~PointsMover();
+  virtual ~PointsMover();
 
-	void setGrowthDir(const vec2d& dir);
-	void setGrowthLength(int length);
-	void setChangeDir(const vec2d& dir);
-	void setOffset(const vec2i& offset);
-	void setLookAhead(bool look);
-	void setGradient(std::shared_ptr<ip::Image<double>> grad);
-	void setGradientDir(std::shared_ptr<ip::Image<double>> dir);
-	void setPrevLayers(const QVector<QVector<vec2i>>& layers);
+  void setGrowthDir(const vec2d& dir);
+  void setGrowthLength(int length);
+  void setChangeDir(const vec2d& dir);
+  void setOffset(const vec2i& offset);
+  void setLookAhead(bool look);
+  void setGradient(std::shared_ptr<ip::Image<double>> grad);
+  void setGradientDir(std::shared_ptr<ip::Image<double>> dir);
+  void setPrevLayers(const QVector<QVector<vec2i>>& layers);
 
-	virtual void move(QVector<vec2i>& points) = 0;
+  virtual void move(QVector<vec2i>& points) = 0;
 };
 
 #endif // POINTS_MOVER_H_INCLUDED__

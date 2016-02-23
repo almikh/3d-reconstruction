@@ -1,4 +1,4 @@
-#ifndef PLANE_H_INCLUDED__
+п»ї#ifndef PLANE_H_INCLUDED__
 #define PLANE_H_INCLUDED__
 
 #include <vertex.h>
@@ -7,55 +7,55 @@
 template<class T>
 class Plane {
 public:
-	T A, B, C, D;
+  T A, B, C, D;
 
-	Plane() : A(0), B(0), C(0), D(0) {}
-	Plane(T _A, T _B, T _C, T _D) : A(_A), B(_B), C(_C), D(_D) {}
-	template<class T2>
-	Plane(const vec3<T2>& f, const vec3<T2>& s, const vec3<T2>& t) {
-		create(f, s, t);
-	}
+  Plane() : A(0), B(0), C(0), D(0) {}
+  Plane(T _A, T _B, T _C, T _D) : A(_A), B(_B), C(_C), D(_D) {}
+  template<class T2>
+  Plane(const vec3<T2>& f, const vec3<T2>& s, const vec3<T2>& t) {
+    create(f, s, t);
+  }
 
-	template<class T2>
-	Plane<T>& create(const vec3<T2>& f, const vec3<T2>& s, const vec3<T2>& t) {
-		mat3d matA, matB, matC, matD;
-		matA(0, 0) = 1;   matA(0, 1) = f.y; matA(0, 2) = f.z;
-		matA(1, 0) = 1;   matA(1, 1) = s.y;	matA(1, 2) = s.z;
-		matA(2, 0) = 1;	  matA(2, 1) = t.y;	matA(2, 2) = t.z;
-		matB(0, 0) = f.x; matB(0, 1) = 1;	matB(0, 2) = f.z;
-		matB(1, 0) = s.x; matB(1, 1) = 1;	matB(1, 2) = s.z;
-		matB(2, 0) = t.x; matB(2, 1) = 1;	matB(2, 2) = t.z;
-		matC(0, 0) = f.x; matC(0, 1) = f.y;	matC(0, 2) = 1;
-		matC(1, 0) = s.x; matC(1, 1) = s.y;	matC(1, 2) = 1;
-		matC(2, 0) = t.x; matC(2, 1) = t.y;	matC(2, 2) = 1;
-		matD(0, 0) = f.x; matD(0, 1) = f.y; matD(0, 2) = f.z;
-		matD(1, 0) = s.x; matD(1, 1) = s.y; matD(1, 2) = s.z;
-		matD(2, 0) = t.x; matD(2, 1) = t.y; matD(2, 2) = t.z;
-		A = static_cast<T>(matA.det());
-		B = static_cast<T>(matB.det());
-		C = static_cast<T>(matC.det());
-		D = static_cast<T>(matD.det());
-		return *this;
-	}
+  template<class T2>
+  Plane<T>& create(const vec3<T2>& f, const vec3<T2>& s, const vec3<T2>& t) {
+    mat3d matA, matB, matC, matD;
+    matA(0, 0) = 1;   matA(0, 1) = f.y; matA(0, 2) = f.z;
+    matA(1, 0) = 1;   matA(1, 1) = s.y;	matA(1, 2) = s.z;
+    matA(2, 0) = 1;	  matA(2, 1) = t.y;	matA(2, 2) = t.z;
+    matB(0, 0) = f.x; matB(0, 1) = 1;	matB(0, 2) = f.z;
+    matB(1, 0) = s.x; matB(1, 1) = 1;	matB(1, 2) = s.z;
+    matB(2, 0) = t.x; matB(2, 1) = 1;	matB(2, 2) = t.z;
+    matC(0, 0) = f.x; matC(0, 1) = f.y;	matC(0, 2) = 1;
+    matC(1, 0) = s.x; matC(1, 1) = s.y;	matC(1, 2) = 1;
+    matC(2, 0) = t.x; matC(2, 1) = t.y;	matC(2, 2) = 1;
+    matD(0, 0) = f.x; matD(0, 1) = f.y; matD(0, 2) = f.z;
+    matD(1, 0) = s.x; matD(1, 1) = s.y; matD(1, 2) = s.z;
+    matD(2, 0) = t.x; matD(2, 1) = t.y; matD(2, 2) = t.z;
+    A = static_cast<T>(matA.det());
+    B = static_cast<T>(matB.det());
+    C = static_cast<T>(matC.det());
+    D = static_cast<T>(matD.det());
+    return *this;
+  }
 
-	/* расстояние от точки М до этой плоскости */
-	double dist(const vec3<T>& M) const {
-		return abs(A*M.x + B*M.y + *M.z + D) / sqrt(double(A*A + B*B + C*C));
-	}
+  /* СЂР°СЃСЃС‚РѕСЏРЅРёРµ РѕС‚ С‚РѕС‡РєРё Рњ РґРѕ СЌС‚РѕР№ РїР»РѕСЃРєРѕСЃС‚Рё */
+  double dist(const vec3<T>& M) const {
+    return abs(A*M.x + B*M.y + *M.z + D) / sqrt(double(A*A + B*B + C*C));
+  }
 
-	/* угол между плоскостями */
-	double angle(const Plane<T>& plane) const {
-		return normal().angle(plane.angle());
-	}
+  /* СѓРіРѕР» РјРµР¶РґСѓ РїР»РѕСЃРєРѕСЃС‚СЏРјРё */
+  double angle(const Plane<T>& plane) const {
+    return normal().angle(plane.angle());
+  }
 
-	/* угол между лучом и плоскостью */
-	double angle(const vec3<T>& straight) const {
-		return normal().angle(straight);
-	}
+  /* СѓРіРѕР» РјРµР¶РґСѓ Р»СѓС‡РѕРј Рё РїР»РѕСЃРєРѕСЃС‚СЊСЋ */
+  double angle(const vec3<T>& straight) const {
+    return normal().angle(straight);
+  }
 
-	vec3<T> normal() const {
-		return vec3<T>(A, B, C);
-	}
+  vec3<T> normal() const {
+    return vec3<T>(A, B, C);
+  }
 };
 
 #endif // PLANE_H_INCLUDED__

@@ -6,48 +6,48 @@
 #include <vec3.h>
 
 namespace slae {
-	/* Метод алгебраической прогонки */
-	void diag3rd(double* a, double* b, double* c, double* d, double* dst, int n);
+  /* Метод алгебраической прогонки */
+  void diag3rd(double* a, double* b, double* c, double* d, double* dst, int n);
 }
 
 template <class T> 
 vec2<T> operator+(const vec2<T>& lhs, const vec2<T>& rhs) {
-	return vec2<T>(lhs.x + rhs.x, lhs.y + rhs.y);
+  return vec2<T>(lhs.x + rhs.x, lhs.y + rhs.y);
 }
 
 template <class T> 
 vec2<T> operator-(const vec2<T>& lhs, const vec2<T>& rhs) {
-	return vec2<T>(lhs.x - rhs.x, lhs.y - rhs.y);
+  return vec2<T>(lhs.x - rhs.x, lhs.y - rhs.y);
 }
 
 template <class T>
 bool operator==(const vec2<T>& lhs, const vec2<T>& rhs) {
-	return (lhs.x == rhs.x && lhs.y == rhs.y);
+  return (lhs.x == rhs.x && lhs.y == rhs.y);
 }
 
 template <class T> 
 vec2<T> operator*(const vec2<T>& lhs, const vec2<T>& rhs) {
-	return vec2<T>(lhs.x * rhs.x, lhs.y * rhs.y);
+  return vec2<T>(lhs.x * rhs.x, lhs.y * rhs.y);
 }
 
 template <class T> 
 vec2<T> operator/(const vec2<T>& lhs, const vec2<T>& rhs) {
-	return vec2<T>(lhs.x / rhs.x, lhs.y / rhs.y);
+  return vec2<T>(lhs.x / rhs.x, lhs.y / rhs.y);
 }
 
 template <class T>
 vec2<T> operator/(const vec2<T>& lhs, const T& rhs) {
-	return vec2<T>(lhs.x / rhs, lhs.y / rhs);
+  return vec2<T>(lhs.x / rhs, lhs.y / rhs);
 }
 
 template <class T>
 vec2<T> operator*(const T& lhs, const vec2<T>&& rhs) {
-	return vec2<T>(rhs.x*lhs, rhs.y*lhs);
+  return vec2<T>(rhs.x*lhs, rhs.y*lhs);
 }
 
 template <class T>
 vec2<T> operator*(const vec2<T>& lhs, const T& rhs) {
-	return vec2<T>(lhs.x*rhs, lhs.y*rhs);
+  return vec2<T>(lhs.x*rhs, lhs.y*rhs);
 }
 
 template <class T> 
@@ -128,11 +128,11 @@ vec3<T> operator *(const vec3<T>& rhs, const matrix<T, 3>& lhs) {
 
 template<class T>
 vec3<T> operator *(const matrix<T, 3>& lhs, const vec3<T>& rhs) {
-	return vec3<T>(
-		lhs(0, 0)*rhs.x + lhs(0, 1)*rhs.y + lhs(0, 2)*rhs.z,
-		lhs(1, 0)*rhs.x + lhs(1, 1)*rhs.y + lhs(1, 2)*rhs.z,
-		lhs(2, 0)*rhs.x + lhs(2, 1)*rhs.y + lhs(2, 2)*rhs.z
-		);
+  return vec3<T>(
+        lhs(0, 0)*rhs.x + lhs(0, 1)*rhs.y + lhs(0, 2)*rhs.z,
+        lhs(1, 0)*rhs.x + lhs(1, 1)*rhs.y + lhs(1, 2)*rhs.z,
+        lhs(2, 0)*rhs.x + lhs(2, 1)*rhs.y + lhs(2, 2)*rhs.z
+        );
 }
 
 #endif // ALGEBRA_H_INCLUDED__

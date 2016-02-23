@@ -4,9 +4,9 @@
 
 class DefaultPointsMover: public PointsMover {
 public:
-	DefaultPointsMover() = default;
+  DefaultPointsMover() = default;
 
-	void move(QVector<vec2i>& points) override;
+  void move(QVector<vec2i>& points) override;
 };
 
 #endif // DEFAULT_POINTS_MOVER_H_INCLUDED__

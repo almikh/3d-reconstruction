@@ -1,4 +1,4 @@
-#ifndef MODEL_SETTINGS_WIDGET_H_INCLUDED__
+﻿#ifndef MODEL_SETTINGS_WIDGET_H_INCLUDED__
 #define MODEL_SETTINGS_WIDGET_H_INCLUDED__
 
 #include <memory>
@@ -7,21 +7,21 @@
 class QSlider;
 
 class ModelSettingsWidget : public QMainWindow {
-	Q_OBJECT
+  Q_OBJECT
 
 public:
-	QSlider* step;
-	QSlider* slices;
+  QSlider* step;
+  QSlider* slices;
 
 public:
-	explicit ModelSettingsWidget(QWidget* parent = nullptr);
-	~ModelSettingsWidget();
+  explicit ModelSettingsWidget(QWidget* parent = nullptr);
+  ~ModelSettingsWidget();
 
-	void hideEvent(QHideEvent*);
+  void hideEvent(QHideEvent*);
 
 signals:
-	void signalHide();
-	void signalChangeStep(int step);
+  void signalHide();
+  void signalChangeStep(int step);
 };
 
 #endif // MODEL_SETTINGS_WIDGET_H_INCLUDED__
