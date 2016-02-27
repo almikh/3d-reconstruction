@@ -225,7 +225,7 @@ void MainWindow::slotMouseMoveEvent(QMouseEvent* event) {
       scene_coord.setX(event->x() - session_->screen_size.x / 2);
       scene_coord.setY(event->y() - session_->screen_size.y / 2);
 
-      if (event->button() == Qt::LeftButton) {
+      if (event->buttons() & Qt::LeftButton) {
         if (!viewport_->selected_area.isEmpty()) {
           viewport_->selected_area.pop_back();
           viewport_->selected_area.push_back(scene_coord);
@@ -279,7 +279,7 @@ void MainWindow::slotMousePressEvent(QMouseEvent* event) {
         viewport_->selected_area.push_back(scene_coord);
         viewport_->updateGL();
       }
-      else if (event->buttons() & Qt::RightButton) {
+      else if (event->button() == Qt::RightButton) {
         if (!session_->selected_meshes.isEmpty()) {
           shifts_.clear();
           prev_mouse_ = scene_coord;
@@ -332,8 +332,13 @@ void MainWindow::slotMouseReleaseEvent(QMouseEvent* event) {
           viewport_->updateGL();
         }
       }
-      else if (event->buttons() & Qt::RightButton) {
+      else if (event->button() == Qt::RightButton) {
+        for (auto mesh : session_->selected_meshes) {
+          model_creator_->place(mesh, 16); // TODO
+        }
+
         shifts_.clear();
+        viewport_->updateGL();
       }
     }
   }

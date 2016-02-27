@@ -1,19 +1,64 @@
 ﻿#include "cylindical-model-creator.h"
+#include <symmetric-points-mover.h>
 #include <default-points-mover.h>
 #include <ellipse-creator.h>
 #include <algebra.h>
 #include <line.h>
 #include <aabb.h>
 
+template <>
+inline uint qHash(const vec2i& key, uint seed)
+Q_DECL_NOEXCEPT_EXPR(noexcept(qHash(key.x, seed)) && noexcept(qHash(key.y, seed)))
+{
+  uint h1 = qHash(key.x, seed);
+  uint h2 = qHash(key.y, seed);
+  return ((h1 << 16) | (h1 >> 16)) ^ h2 ^ seed;
+}
+
 namespace rn {
   int CylindricalModelCreator::min_available_distance = 32;
 
   CylindricalModelCreator::CylindricalModelCreator():
     clicks_counter_(0),
-    points_mover_(new DefaultPointsMover()),
+    points_mover_(new SymmetricPointsMover()), // DefaultPointsMover
     basis_(3, vec2i(0, 0))
   {
 
+  }
+
+  void CylindricalModelCreator::place(Mesh::HardPtr mesh, int radius) {
+    const int dx[] = { -1, 0, 1, 1, 1, 0, -1, -1 };
+    const int dy[] = { -1, -1, -1, 0, 1, 1, 1, 0 };
+    QSet<vec2i> shifts = { vec2i(0, 0) };
+    for (int r = 1; r <= radius; ++r) {
+      for (int i = 0; i < 8; ++i) {
+        shifts.insert(vec2i(dx[i] * r, dy[i] * r));
+      }
+    }
+
+    vec2i target_shift(0, 0);
+    double energy = Double::min();
+    vec2i offset = data_->screenCenter() - data_->offsets;
+    for (auto shift : shifts) {
+      double cur_energy = 0.0;
+      for (auto& layer : mesh->anchor_points) {
+        for (auto& p : layer) {
+          auto point = p + offset + shift; // СК изображения
+          if (data_->gvf->isCorrect(point.x, point.y)) { // в энергии будем учитывать только точки, попадающие в изображение
+            cur_energy += data_->gvf->at(point.x, point.y);
+          }
+        }
+      }
+
+      if (cur_energy > energy) {
+        target_shift = shift;
+        energy = cur_energy;
+      }
+    }
+
+    if (target_shift != vec2i(0, 0)) {
+      mesh->move(vec3i(target_shift, ProjectionPlane::OXY));
+    }
   }
 
   void CylindricalModelCreator::onMousePress(Qt::MouseButton button) {
@@ -212,8 +257,6 @@ namespace rn {
     auto layer = prev_layers_.back();
     double dist = Line<int>(layer[0], layer[1]).dist(offset_mouse_);
 
-    current_mesh_->clear();
-
     while (std::abs(dist) >= abs(data_->step)) {
       correctStep();
 
@@ -225,24 +268,30 @@ namespace rn {
         break; // слой выродился в точку
       }
 
-
       layer[2] = layer[0] + (basis_[2] - basis_[0]);
-
-      auto ellipse = createLayerPoints(layer);
-      current_mesh_->addLayer(ellipse.toStdVector());
       prev_layers_.push_back(layer);
 
-      if (using_texturing) {
-        auto uv = defTexCoord(ellipse, layer);
-        current_mesh_->addTexCoords(uv);
-      }
-
-      layer = prev_layers_.back();
       dist = Line<int>(layer[0], layer[1]).dist(offset_mouse_);
     }
 
     data_->setLastLayer(createEllipseByThreePoints(prev_layers_.back()));
-    current_mesh_->updateNormals();
+    current_mesh_ = createMeshFromLayers(prev_layers_);
+  }
+
+  Mesh::HardPtr CylindricalModelCreator::createMeshFromLayers(const QVector<QVector<vec2i>>& layers) {
+    Mesh::HardPtr mesh(new Mesh());
+    for (auto layer : layers) {
+      auto ellipse = createLayerPoints(layer);
+      mesh->addLayer(ellipse.toStdVector());
+
+      if (using_texturing) {
+        auto uv = defTexCoord(ellipse, layer);
+        mesh->addTexCoords(uv);
+      }
+    }
+
+    mesh->updateNormals();
+    return mesh;
   }
 
   void CylindricalModelCreator::goToUpdateMesh() {

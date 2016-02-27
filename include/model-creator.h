@@ -36,6 +36,9 @@ namespace rn {
     virtual void onMousePress(Qt::MouseButton button);
     virtual void onMouseRelease(Qt::MouseButton button);
 
+    virtual void place(Mesh::HardPtr mesh, int radius);
+    virtual Mesh::HardPtr createMeshFromLayers(const QVector<QVector<vec2i>>& layers);
+
     virtual void render() {};
 
   signals:

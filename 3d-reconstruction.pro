@@ -20,7 +20,8 @@ SOURCES += \
 	src/default-points-mover.cpp \
 	src/cylindical-model-creator.cpp \
 	src/session.cpp \
-	src/timer.cpp
+	src/timer.cpp \
+    src/symmetric-points-mover.cpp
 
 INCLUDEPATH = include
 	
@@ -50,6 +51,7 @@ HEADERS += \
 	include/trackball.h \
 	include/viewport.h \
 	include/session.h \
-	include/timer.h
+	include/timer.h \
+    include/symmetric-points-mover.h
 		
 CONFIG += c++11

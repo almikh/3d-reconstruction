@@ -34,4 +34,18 @@ namespace rn {
   void ModelCreator::onMouseRelease(Qt::MouseButton button) {
     buttons_[button] = false;
   }
+
+  void ModelCreator::place(Mesh::HardPtr mesh, int radius) {
+    Q_UNUSED(radius);
+    Q_UNUSED(mesh);
+
+    Q_ASSERT(false);
+  }
+
+  Mesh::HardPtr ModelCreator::createMeshFromLayers(const QVector<QVector<vec2i>>& layers) {
+    Q_UNUSED(layers);
+
+    Q_ASSERT(false);
+    return nullptr;
+  }
 }

@@ -10,6 +10,13 @@ namespace slae {
   void diag3rd(double* a, double* b, double* c, double* d, double* dst, int n);
 }
 
+namespace rn {
+  template <class T>
+  vec2<T> round(const vec2<T>& lhs) {
+    return vec2<T>(std::round(lhs.x), std::round(lhs.y));
+  }
+}
+
 template <class T> 
 vec2<T> operator+(const vec2<T>& lhs, const vec2<T>& rhs) {
   return vec2<T>(lhs.x + rhs.x, lhs.y + rhs.y);
@@ -23,6 +30,11 @@ vec2<T> operator-(const vec2<T>& lhs, const vec2<T>& rhs) {
 template <class T>
 bool operator==(const vec2<T>& lhs, const vec2<T>& rhs) {
   return (lhs.x == rhs.x && lhs.y == rhs.y);
+}
+
+template <class T>
+bool operator!=(const vec2<T>& lhs, const vec2<T>& rhs) {
+  return !(lhs == rhs);
 }
 
 template <class T> 
@@ -45,9 +57,9 @@ vec2<T> operator*(const T& lhs, const vec2<T>&& rhs) {
   return vec2<T>(rhs.x*lhs, rhs.y*lhs);
 }
 
-template <class T>
-vec2<T> operator*(const vec2<T>& lhs, const T& rhs) {
-  return vec2<T>(lhs.x*rhs, lhs.y*rhs);
+template <class T1, class T2>
+vec2<T1> operator*(const vec2<T1>& lhs, const T2& rhs) {
+  return vec2<T1>(lhs.x*rhs, lhs.y*rhs);
 }
 
 template <class T> 

@@ -220,10 +220,10 @@ namespace rn
       int h = session_->height();
 
       glBegin(GL_QUADS);
-      glTexCoord2d(0, 0); glVertex3i(-w / 2, h / 2, -250);
-      glTexCoord2d(1, 0); glVertex3i(w / 2, h / 2, -250);
-      glTexCoord2d(1, 1); glVertex3i(w / 2, -h / 2, -250);
-      glTexCoord2d(0, 1); glVertex3i(-w / 2, -h / 2, -250);
+      glTexCoord2d(0, 0); glVertex3i(-w / 2, h / 2, -w);
+      glTexCoord2d(1, 0); glVertex3i(w / 2, h / 2, -w);
+      glTexCoord2d(1, 1); glVertex3i(w / 2, -h / 2, -w);
+      glTexCoord2d(0, 1); glVertex3i(-w / 2, -h / 2, -w);
       glEnd();
 
       glDisable(GL_TEXTURE_2D);
@@ -250,15 +250,16 @@ namespace rn
 
       auto origin = selected_area.front();
       auto other = selected_area.back();
+      int z = scene_size_.width() - 1;
 
-      glLineWidth(5);
+      glLineWidth(2);
       glColor3d(0, 1, 0);
-			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+      glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
       glBegin(GL_QUADS);
-      glVertex2i(origin.x(), origin.y());
-      glVertex2i(other.x(), origin.y());
-      glVertex2i(other.x(), other.y());
-      glVertex2i(origin.x(), other.y());
+      glVertex3i(origin.x(), origin.y(), z);
+      glVertex3i(other.x(), origin.y(), z);
+      glVertex3i(other.x(), other.y(), z);
+      glVertex3i(origin.x(), other.y(), z);
       glEnd();
       glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
       glColor3d(1, 1, 1);

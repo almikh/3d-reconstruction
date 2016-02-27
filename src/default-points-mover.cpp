@@ -2,14 +2,15 @@
 #include <QtGlobal>
 #include <cmath>
 
+#include <algebra.h>
+
 void DefaultPointsMover::move(QVector<vec2i>& points)  {
   // TODO Проверять параметры - заданы ли нужные
 
   for (int index = 0; index < 2/*points.size()*/; ++index) {
     int viewed = 1;
     vec2i& point = points[index];
-    point.x += offset_.x + std::round(growth_dir_.x * growth_length_);
-    point.y += offset_.y + std::round(growth_dir_.y * growth_length_);
+    point += offset_ + rn::round(growth_dir_ * growth_length_).to<int>();
     Q_ASSERT(grad_->isCorrect(point.x, point.y));
 
     int ind;
@@ -43,7 +44,6 @@ void DefaultPointsMover::move(QVector<vec2i>& points)  {
       }
     }
 
-    point.x -= offset_.x;
-    point.y -= offset_.y;
+    point -= offset_;
   }
 }
