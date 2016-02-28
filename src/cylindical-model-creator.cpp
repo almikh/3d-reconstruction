@@ -134,6 +134,11 @@ namespace rn {
     }
   }
 
+  void CylindricalModelCreator::OnInterruptRequest() {
+    goToOverview();
+    current_mesh_.reset();
+  }
+
   void CylindricalModelCreator::correctStep() {
     auto layer = prev_layers_.back();
     auto line = Line<int>(layer[0], layer[1]);

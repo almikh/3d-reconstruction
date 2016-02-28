@@ -22,6 +22,10 @@ namespace rn {
     data_ = data;
   }
 
+  void ModelCreator::OnInterruptRequest() {
+
+  }
+
   void ModelCreator::onMouseMove(int x, int y) {
     mouse_.x = x;
     mouse_.y = y;

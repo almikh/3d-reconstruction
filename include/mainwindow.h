@@ -11,55 +11,66 @@ class QAction;
 class ModelSettingsWidget;
 
 namespace rn {
-	class Viewport;
+  class Viewport;
 }
 
 class MainWindow : public QMainWindow {
-	Q_OBJECT
+  Q_OBJECT
 
 private:
-	rn::Viewport* viewport_;
-	ModelSettingsWidget* settings_widget_;
-	struct {
-		QAction* open;
-		QAction* create;
+  struct Toolbar {
+    QAction* open;
 
-		QAction* texturing;
-		QAction* unite_meshes;
-		QAction* enable_last_layer;
-		QAction* enable_first_layer;
-		QAction* select_mode;
- 	} toolbar_;
-	
+    QAction* create;
+    QAction* cursor;
+    QAction* hand;
+
+    QAction* texturing;
+    QAction* unite_meshes;
+    QAction* enable_last_layer;
+    QAction* enable_first_layer;
+
+    void resetOtherButtons(QAction* current);
+  };
+
 private:
-	std::shared_ptr<rn::Session> session_;
-	std::shared_ptr<rn::ModelCreator> model_creator_;
-	QList<vec3i> shifts_; // сдвиги, используются для перемещения моделей мышкой
-	QPoint prev_mouse_; // предыдущие координаты мыши
+  rn::Viewport* viewport_;
+  ModelSettingsWidget* settings_widget_;
+  Toolbar toolbar_;
 
-	void openImage(const QString& filename);
-	void createMainToolbar();
-	void createMenuView();
+private:
+  std::shared_ptr<rn::Session> session_;
+  std::shared_ptr<rn::ModelCreator> model_creator_;
+  QList<vec3i> shifts_; // сдвиги, используются для перемещения моделей мышкой
+  QPoint prev_mouse_; // предыдущие координаты мыши
+
+  QPoint convertToSceneCoord(const QPoint& pos);
+
+  void openImage(const QString& filename);
+  void createMainToolbar();
+  void createMenuView();
 
 public:
-	explicit MainWindow(QWidget* parent = nullptr);
-	~MainWindow();
+  explicit MainWindow(QWidget* parent = nullptr);
+  ~MainWindow();
 
-	void showEvent(QShowEvent*);
-	void keyPressEvent(QKeyEvent* event) override;
+  void showEvent(QShowEvent*);
+  void keyPressEvent(QKeyEvent* event) override;
 
-	void dragEnterEvent(QDragEnterEvent* e) override;
-	void dropEvent(QDropEvent* e) override;
+  void dragEnterEvent(QDragEnterEvent* e) override;
+  void dropEvent(QDropEvent* e) override;
 
 private slots:
-	void slotOpenImage();	
+  void slotOpenImage();
 
-	void slotWheelEvent(QWheelEvent* event);
-	void slotMouseMoveEvent(QMouseEvent* event);
-	void slotMousePressEvent(QMouseEvent* event);
-	void slotMouseReleaseEvent(QMouseEvent* event);
-	void slotModelCreated(Mesh::HardPtr mesh);
-	void slotInterruptCreatingProcess();
+  void slotWheelEvent(QWheelEvent* event);
+  void slotMouseMoveEvent(QMouseEvent* event);
+  void slotMousePressEvent(QMouseEvent* event);
+  void slotMouseReleaseEvent(QMouseEvent* event);
+  void slotModelCreated(Mesh::HardPtr mesh);
+
+  void slotInterruptCreatingProcess();
+  void slotResetOtherButtons();
 };
 
 #endif // MAINWINDOW_H_INCLUDED__

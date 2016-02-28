@@ -32,6 +32,7 @@ namespace rn {
     std::shared_ptr<rn::Session> data() const;
     void setSessionData(std::shared_ptr<rn::Session> data);
 
+    virtual void OnInterruptRequest();
     virtual void onMouseMove(int x, int y);
     virtual void onMousePress(Qt::MouseButton button);
     virtual void onMouseRelease(Qt::MouseButton button);

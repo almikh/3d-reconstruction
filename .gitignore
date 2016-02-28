@@ -1,3 +1,18 @@
+# Folders
+Debug/
+Win32/
+
+# Generated files
+*/moc_*
+
+# User-specific files
+*.suo
+*.user
+
+# Visual studio files.
+*.sdf
+*.pdb
+
 # Compiled Object files
 *.slo
 *.lo
@@ -12,9 +27,6 @@
 *.so
 *.dylib
 *.dll
-
-# Fortran module files
-*.mod
 
 # Compiled Static libraries
 *.lai

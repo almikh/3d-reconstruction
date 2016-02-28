@@ -46,6 +46,7 @@ namespace rn {
     void onMousePress(Qt::MouseButton button) override;
     void onMouseRelease(Qt::MouseButton button) override;
     void onMouseMove(int x, int y) override;
+    void OnInterruptRequest() override;
 
     void render() override;
   };

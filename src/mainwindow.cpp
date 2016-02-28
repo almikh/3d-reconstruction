@@ -18,6 +18,13 @@
 #include <model-settings-widget.h>
 #include <cylindical-model-creator.h>
 
+/* MainWindow::Toolbar */
+void MainWindow::Toolbar::resetOtherButtons(QAction* current) {
+  if (create->isCheckable() && create != current) create->setChecked(false);
+  if (cursor->isCheckable() && cursor != current) cursor->setChecked(false);
+  if (hand->isCheckable() && hand != current) hand->setChecked(false);
+}
+
 /* MainWindow */
 MainWindow::MainWindow(QWidget* parent) :
   QMainWindow(parent),
@@ -95,7 +102,8 @@ void MainWindow::dropEvent(QDropEvent *e) {
 }
 
 void MainWindow::createMainToolbar() {
-  auto toolbar = addToolBar("Main toolbar");
+  auto toolbar = new QToolBar("Main toolbar");
+  addToolBar(Qt::LeftToolBarArea, toolbar);
   toolbar->setIconSize(QSize(32, 32));
 
   toolbar_.open = toolbar->addAction(QIcon("icons/folder.png"), "Open image");
@@ -105,7 +113,22 @@ void MainWindow::createMainToolbar() {
 
   toolbar_.create = toolbar->addAction(QIcon("icons/create.png"), "Create model");
   toolbar_.create->setCheckable(true);
-  //connect(toolbar_.create, &QAction::changed, &MainWindow::slotInterruptCreatingProcess);
+  connect(toolbar_.create, SIGNAL(triggered()), SLOT(slotResetOtherButtons()));
+  connect(toolbar_.create, SIGNAL(triggered()), SLOT(slotInterruptCreatingProcess()));
+  connect(toolbar_.create, &QAction::triggered, [=](bool checked) {
+    if (!session_) return;
+    if (checked) session_->selected_meshes.clear();
+  });
+
+  toolbar_.cursor = toolbar->addAction(QIcon("icons/cursor.png"), "Cursor mode");
+  toolbar_.cursor->setCheckable(true);
+  connect(toolbar_.cursor, SIGNAL(triggered()), SLOT(slotResetOtherButtons()));
+  connect(toolbar_.cursor, SIGNAL(triggered()), SLOT(slotInterruptCreatingProcess()));
+
+  toolbar_.hand = toolbar->addAction(QIcon("icons/hand.png"), "Hand mode");
+  toolbar_.hand->setCheckable(true);
+  connect(toolbar_.hand, SIGNAL(triggered()), SLOT(slotResetOtherButtons()));
+  connect(toolbar_.hand, SIGNAL(triggered()), SLOT(slotInterruptCreatingProcess()));
 
   toolbar->addSeparator();
 
@@ -135,16 +158,15 @@ void MainWindow::createMainToolbar() {
 
   toolbar->addSeparator();
 
-  toolbar_.select_mode = toolbar->addAction(QIcon("icons/select-area.png"), "Objects manipulation");
-  toolbar_.select_mode->setCheckable(true);
-  connect(toolbar_.select_mode, &QAction::triggered, [=](bool checked) {
-    if (!session_) return;
-    if (!checked) {
-      session_->selected_meshes.clear();
-    }
+  // TODO
+  //connect(toolbar_.select_mode, &QAction::triggered, [=](bool checked) {
+  //  if (!session_) return;
+  //  if (!checked) {
+  //    session_->selected_meshes.clear();
+  //  }
 
-    viewport_->updateGL();
-  });
+  //  viewport_->updateGL();
+  //});
 }
 
 void MainWindow::createMenuView() {
@@ -202,145 +224,132 @@ void MainWindow::slotWheelEvent(QWheelEvent* event) {
   viewport_->updateGL();
 }
 
-void MainWindow::slotMouseMoveEvent(QMouseEvent* event) {
-  if (toolbar_.create->isChecked()) {
+QPoint MainWindow::convertToSceneCoord(const QPoint& pos) {
+  Q_ASSERT(session_);
+
+  QPoint scene_coord;
+  scene_coord.setX(pos.x() - session_->screen_size.x / 2);
+  scene_coord.setY(pos.y() - session_->screen_size.y / 2);
+
+  return scene_coord;
+}
+
+void MainWindow::slotMousePressEvent(QMouseEvent* event) {
+  if (toolbar_.create->isChecked() && event->button() == Qt::LeftButton) {
     model_creator_->onMouseMove(event->x(), event->y());
+    model_creator_->onMousePress(event->button());
     viewport_->updateGL();
   }
-  else {
-    if (!toolbar_.select_mode->isChecked()) {
-      if (viewport_->trackball->isClicked()) {
-        if (event->buttons() & Qt::RightButton) {
-          viewport_->trackball->rotate(event->x(), event->y());
+  else if (toolbar_.cursor->isChecked()) {
+    if (event->button() == Qt::RightButton) { // крутим модель
+      static double model_view_matr[16];
+      glGetDoublev(GL_MODELVIEW_MATRIX, model_view_matr);
 
-          glLoadIdentity();
-          glMultMatrixf(viewport_->trackball->getMat());
-
-          viewport_->updateGL();
-        }
-      }
+      viewport_->trackball->setLastMatrix(model_view_matr);
+      viewport_->trackball->click(event->x(), event->y());
+      viewport_->updateGL();
     }
-    else {
-      QPoint scene_coord;
-      scene_coord.setX(event->x() - session_->screen_size.x / 2);
-      scene_coord.setY(event->y() - session_->screen_size.y / 2);
-
-      if (event->buttons() & Qt::LeftButton) {
-        if (!viewport_->selected_area.isEmpty()) {
-          viewport_->selected_area.pop_back();
-          viewport_->selected_area.push_back(scene_coord);
-          viewport_->updateGL();
-        }
-      }
-      else if (event->buttons() & Qt::RightButton) {
-        if (!session_->selected_meshes.isEmpty()) {
-          Q_ASSERT(!shifts_.isEmpty());
-          if (prev_mouse_ != scene_coord) {
-            for (auto mesh : session_->selected_meshes) {
-              auto diff = scene_coord - prev_mouse_;
-              mesh->move(vec3i(diff.x(), diff.y(), 0));
-            }
-
-            prev_mouse_ = scene_coord;
-            viewport_->updateGL();
-          }
-        }
+    else if (event->button() == Qt::LeftButton) { // выделяем отдельные меши
+      auto pos = convertToSceneCoord(event->pos());
+      viewport_->selected_area.push_back(pos);
+      viewport_->selected_area.push_back(pos);
+      viewport_->updateGL();
+    }
+  }
+  else if (toolbar_.hand->isChecked() && event->button() == Qt::LeftButton) {
+    // перемещаем выделенные меши
+    if (!session_->selected_meshes.isEmpty()) {
+      shifts_.clear();
+      prev_mouse_ = convertToSceneCoord(event->pos());
+      vec3i mouse(prev_mouse_.x(), prev_mouse_.y(), 0);
+      for (auto mesh : session_->selected_meshes) {
+        shifts_.push_back(mouse - mesh->center());
       }
     }
   }
 }
 
-void MainWindow::slotMousePressEvent(QMouseEvent* event) {
+void MainWindow::slotMouseMoveEvent(QMouseEvent* event) {
   if (toolbar_.create->isChecked()) {
-    if (event->button() == Qt::LeftButton) {
-      model_creator_->onMouseMove(event->x(), event->y());
-      model_creator_->onMousePress(event->button());
-      viewport_->updateGL();
+    model_creator_->onMouseMove(event->x(), event->y());
+    viewport_->updateGL();
+  }
+  else if (toolbar_.cursor->isChecked()) {
+    if (event->buttons() & Qt::RightButton) { // крутим модель
+      if (viewport_->trackball->isClicked()) {
+        viewport_->trackball->rotate(event->x(), event->y());
+
+        glLoadIdentity();
+        glMultMatrixf(viewport_->trackball->getMat());
+
+        viewport_->updateGL();
+      }
+    }
+    else if (event->buttons() & Qt::LeftButton) { // выделяем отдельные меши
+      if (!viewport_->selected_area.isEmpty()) {
+        viewport_->selected_area.pop_back();
+        viewport_->selected_area.push_back(convertToSceneCoord(event->pos()));
+        viewport_->updateGL();
+      }
     }
   }
-  else {
-    if (!toolbar_.select_mode->isChecked()) {
-      if (event->button() == Qt::RightButton) {
-        static double model_view_matr[16];
-        glGetDoublev(GL_MODELVIEW_MATRIX, model_view_matr);
-
-        viewport_->trackball->setLastMatrix(model_view_matr);
-        viewport_->trackball->click(event->x(), event->y());
-        viewport_->updateGL();
-      }
-    }
-    else {
-      QPoint scene_coord;
-      scene_coord.setX(event->x() - session_->screen_size.x / 2);
-      scene_coord.setY(event->y() - session_->screen_size.y / 2);
-
-      if (event->button() == Qt::LeftButton) {
-        viewport_->selected_area.push_back(scene_coord);
-        viewport_->selected_area.push_back(scene_coord);
-        viewport_->updateGL();
-      }
-      else if (event->button() == Qt::RightButton) {
-        if (!session_->selected_meshes.isEmpty()) {
-          shifts_.clear();
-          prev_mouse_ = scene_coord;
-          vec3i mouse(scene_coord.x(), scene_coord.y(), 0);
-          for (auto mesh : session_->selected_meshes) {
-            shifts_.push_back(mouse - mesh->center());
-          }
+  else if (toolbar_.hand->isChecked() && (event->buttons() & Qt::LeftButton)) {
+    // перемещаем выделенные меши
+    if (!session_->selected_meshes.isEmpty()) {
+      Q_ASSERT(!shifts_.isEmpty());
+      auto current_pos = convertToSceneCoord(event->pos());
+      if (prev_mouse_ != current_pos) {
+        for (auto mesh : session_->selected_meshes) {
+          auto diff = current_pos - prev_mouse_;
+          mesh->move(vec3i(diff.x(), diff.y(), 0));
         }
+
+        prev_mouse_ = current_pos;
+        viewport_->updateGL();
       }
     }
   }
 }
 
 void MainWindow::slotMouseReleaseEvent(QMouseEvent* event) {
-  if (toolbar_.create->isChecked()) {
-    if (event->button() == Qt::LeftButton) {
-      model_creator_->onMouseMove(event->x(), event->y());
-      model_creator_->onMouseRelease(event->button());
+  if (toolbar_.create->isChecked() && event->button() == Qt::LeftButton) {
+    model_creator_->onMouseMove(event->x(), event->y());
+    model_creator_->onMouseRelease(event->button());
+    viewport_->updateGL();
+  }
+  else if (toolbar_.cursor->isChecked()) {
+    if (event->button() == Qt::RightButton) { // крутим модель
+      viewport_->trackball->release();
       viewport_->updateGL();
     }
-  }
-  else {
-    if (!toolbar_.select_mode->isChecked()) {
-      if (event->button() == Qt::RightButton) {
-        viewport_->trackball->release();
+    else if (event->button() == Qt::LeftButton) { // выделяем отдельные меши
+      if (viewport_->selected_area.size() > 1) {
+        viewport_->selected_area.pop_back();
+        viewport_->selected_area.push_back(convertToSceneCoord(event->pos()));
         viewport_->updateGL();
-      }
-    }
-    else {
-      QPoint scene_coord;
-      scene_coord.setX(event->x() - session_->screen_size.x / 2);
-      scene_coord.setY(event->y() - session_->screen_size.y / 2);
 
-      if (event->button() == Qt::LeftButton) {
-        if (viewport_->selected_area.size() > 1) {
-          viewport_->selected_area.pop_back();
-          viewport_->selected_area.push_back(scene_coord);
-          viewport_->updateGL();
-
-          // определим меши, попавшие в область выделения
-          session_->selected_meshes.clear();
-          QRect region(viewport_->selected_area[0], viewport_->selected_area[1]);
-          for (auto mesh : session_->meshes) {
-            if (mesh->fallsInto(region)) {
-              session_->selected_meshes.push_back(mesh);
-            }
+        // определим меши, попавшие в область выделения
+        session_->selected_meshes.clear();
+        QRect region(viewport_->selected_area[0], viewport_->selected_area[1]);
+        for (auto mesh : session_->meshes) {
+          if (mesh->fallsInto(region)) {
+            session_->selected_meshes.push_back(mesh);
           }
-
-          viewport_->selected_area.clear();
-          viewport_->updateGL();
-        }
-      }
-      else if (event->button() == Qt::RightButton) {
-        for (auto mesh : session_->selected_meshes) {
-          model_creator_->place(mesh, 16); // TODO
         }
 
-        shifts_.clear();
+        viewport_->selected_area.clear();
         viewport_->updateGL();
       }
     }
+  }
+  else if (toolbar_.hand->isChecked() && event->button() == Qt::LeftButton) {
+    // перемещаем выделенные меши
+    for (auto mesh : session_->selected_meshes) {
+      model_creator_->place(mesh, 16); // TODO сделать спец. toolbar
+    }
+
+    shifts_.clear();
+    viewport_->updateGL();
   }
 }
 
@@ -351,5 +360,22 @@ void MainWindow::slotModelCreated(Mesh::HardPtr mesh) {
 void MainWindow::slotInterruptCreatingProcess() {
   if (!session_) return;
 
-  // TODO тут нужно прервать процесс создания модели
+  auto sender = qobject_cast<QAction*>(QObject::sender());
+  bool checked = sender->isChecked();
+
+  bool need_interrupt = !checked && sender == toolbar_.create;
+  need_interrupt |= checked && sender != toolbar_.create;
+  if (need_interrupt) {
+    model_creator_->OnInterruptRequest();
+    viewport_->updateGL();
+  }
+}
+
+void MainWindow::slotResetOtherButtons() {
+  auto sender = qobject_cast<QAction*>(QObject::sender());
+  bool checked = sender->isChecked();
+  if (checked) {
+    toolbar_.resetOtherButtons(sender);
+    viewport_->updateGL();
+  }
 }
