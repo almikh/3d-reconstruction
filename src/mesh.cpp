@@ -65,16 +65,23 @@ void Mesh::clear() {
 }
 
 Mesh& Mesh::swap(Mesh* mesh) {
+  std::swap(texture_id, mesh->texture_id);
   anchor_points.swap(mesh->anchor_points);
   triangles.swap(mesh->triangles);
   vertices.swap(mesh->vertices);
   tex_coord_.swap(mesh->tex_coord_);
   layers_.swap(mesh->layers_);
+  top_cover_.triangles.swap(mesh->top_cover_.triangles);
+  std::swap(top_cover_.vertex, mesh->top_cover_.vertex);
+  bottom_cover_.triangles.swap(mesh->bottom_cover_.triangles);
+  std::swap(bottom_cover_.vertex, mesh->bottom_cover_.vertex);
 
   return *this;
 }
 
 Mesh& Mesh::move(const vec3i& diff) {
+  bottom_cover_.vertex += diff;
+  top_cover_.vertex += diff;
   for (auto& e : vertices) {
     e += diff;
   }
@@ -116,12 +123,30 @@ bool Mesh::fallsInto(const QRect& rect) const {
   return false;
 }
 
+bool Mesh::contains(const QPoint& point) const {
+  int n = anchor_points.size();
+  for (int i = 0; i < n - 1; ++i) {
+    int x = qMin(anchor_points[i][0].x, anchor_points[i][1].x);
+    int y = qMin(anchor_points[i][0].y, anchor_points[i][1].y);
+    int width = qAbs(anchor_points[i][0].x - anchor_points[i][1].x);
+    int height = qAbs(anchor_points[i][0].y - anchor_points[i + 1][0].y); // расстояние между слоями
+    if (QRect(x, y, width, height).contains(point)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 Mesh Mesh::copy() const {
   Mesh mesh;
   mesh.layers_ = layers_;
   mesh.vertices = vertices;
   mesh.triangles = triangles;
+  mesh.texture_id = texture_id;
   mesh.anchor_points = anchor_points;
+  mesh.bottom_cover_ = bottom_cover_;
+  mesh.top_cover_ = top_cover_;
 
   return mesh;
 }
@@ -144,6 +169,10 @@ Mesh Mesh::unite(const Mesh& first, const Mesh& second) {
   }
 
   Mesh dst;
+
+  // выбираем ненулевую текстуру, если она есть
+  dst.texture_id = first.texture_id ? first.texture_id : second.texture_id;
+
   dst.vertices.insert(dst.vertices.end(), first.vertices.begin(), first.vertices.end());
   dst.vertices.insert(dst.vertices.end(), second.vertices.begin(), second.vertices.end());
 
@@ -152,6 +181,9 @@ Mesh Mesh::unite(const Mesh& first, const Mesh& second) {
 
   dst.tex_coord_.insert(dst.tex_coord_.end(), first.tex_coord_.begin(), first.tex_coord_.end());
   dst.tex_coord_.insert(dst.tex_coord_.end(), second.tex_coord_.begin(), second.tex_coord_.end());
+
+  dst.anchor_points << first.anchor_points;
+  dst.anchor_points << second.anchor_points;
 
   if (near_layers.first == 0) {
     // для первого - слои в обратном порядке
@@ -277,6 +309,8 @@ void Mesh::triangulateLastLayer() {
   for (int i = l.first; i < l.second - 1; ++i) {
     top_cover_.triangles.push_back(Trid(i, i + 1, TOP_VERT_INDEX));
   }
+
+  updateNormals();
 }
 
 void Mesh::triangulateFirstLayer() {
@@ -295,6 +329,8 @@ void Mesh::triangulateFirstLayer() {
   for (int i = l.first; i < l.second - 1; ++i) {
     bottom_cover_.triangles.push_back(Trid(i, i + 1, BOTTOM_VERT_INDEX));
   }
+
+  updateNormals();
 }
 
 void Mesh::triangulateLayer(int index) {
@@ -386,13 +422,14 @@ size_t Mesh::addTriangle(size_t ind1, size_t ind2, size_t ind3) {
   return triangles.size() - 1;
 }
 
-void Mesh::render(const vec3b& color, bool texturing) const {
+void Mesh::render(const vec3b& color, bool texturing, bool selected) const {
   bool use_texture = texturing && !tex_coord_.empty();
 
   glEnable(GL_NORMALIZE);
   glEnable(GL_LIGHTING);
 
   if (use_texture) {
+    glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, texture_id);
   }
 
@@ -406,43 +443,44 @@ void Mesh::render(const vec3b& color, bool texturing) const {
     bool has_tex_coord = false;
     if (use_texture && tri[2] != BOTTOM_VERT_INDEX && tri[2] != TOP_VERT_INDEX) {
       has_tex_coord = true;
-      glEnable(GL_TEXTURE_2D);
       glColor3ub(255, 255, 255);
     }
-    else glColor3ubv(color.coords); // для верхней и нижней крышки текстурирование отключим
-
-    glNormal3d(tri.normal.x, tri.normal.y, tri.normal.z);
-
-    if (use_texture && has_tex_coord) glTexCoord2d(tex_coord_[tri[0]].x, tex_coord_[tri[0]].y);
-    glVertex3i(mesh[tri[0]].x, mesh[tri[0]].y, mesh[tri[0]].z);
-
-    if (use_texture && has_tex_coord) glTexCoord2d(tex_coord_[tri[1]].x, tex_coord_[tri[1]].y);
-    glVertex3i(mesh[tri[1]].x, mesh[tri[1]].y, mesh[tri[1]].z);
-
-    if (use_texture && has_tex_coord) glTexCoord2d(tex_coord_[tri[2]].x, tex_coord_[tri[2]].y);
-    glVertex3i(mesh[tri[2]].x, mesh[tri[2]].y, mesh[tri[2]].z);
-
-    if (use_texture && tri[2] != BOTTOM_VERT_INDEX && tri[2] != TOP_VERT_INDEX) {
-      glDisable(GL_TEXTURE_2D);
+    else {
+      glColor3ubv(color.coords); // для верхней и нижней крышки текстурирование отключим
     }
+
+    glNormal3dv(tri.normal.coords);
+    if (use_texture && has_tex_coord) glTexCoord2dv(tex_coord_[tri[0]].coords);
+    glVertex3iv(mesh[tri[0]].coords);
+
+    glNormal3dv(tri.normal.coords);
+    if (use_texture && has_tex_coord) glTexCoord2dv(tex_coord_[tri[1]].coords);
+    glVertex3iv(mesh[tri[1]].coords);
+
+    glNormal3dv(tri.normal.coords);
+    if (use_texture && has_tex_coord) glTexCoord2dv(tex_coord_[tri[2]].coords);
+    glVertex3iv(mesh[tri[2]].coords);
   }
   glEnd();
+
+  if (use_texture) {
+    glDisable(GL_TEXTURE_2D);
+  }
 
   glDisable(GL_LIGHTING);
   glDisable(GL_NORMALIZE);
 
-  glColor3d(1, 0, 0);
-  glLineWidth(5);
-  glBegin(GL_LINE_STRIP);
-  //for(auto &e: anchor_points) {
-  //	glVertex2d(e.front().x, e.front().y);
-  //}
-  glEnd();
-  glBegin(GL_LINE_STRIP);
-  //for (auto &e : anchor_points) {
-  //	glVertex2d(e[1].x, e[1].y);
-  //}
-  glEnd();
-  glLineWidth(1);
+  if (selected && use_texture) {
+    glLineWidth(5);
+    glColor3d(1, 0, 0);
+
+    glBegin(GL_LINE_STRIP);
+    for(auto &e: anchor_points) glVertex2iv(e[0].coords);
+    glEnd();
+    glBegin(GL_LINE_STRIP);
+    for (auto &e: anchor_points) glVertex2iv(e[1].coords);
+    glEnd();
+    glLineWidth(1);
+  }
   glColor3d(1, 1, 1);
 }

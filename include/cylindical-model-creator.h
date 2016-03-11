@@ -1,5 +1,6 @@
 ﻿#ifndef CYLINDICAL_MODEL_CREATOR_H_INCLUDED__
 #define CYLINDICAL_MODEL_CREATOR_H_INCLUDED__
+
 #include <model-creator.h>
 #include <points-mover.h>
 
@@ -39,6 +40,8 @@ namespace rn {
     // int smooth;
 
     CylindricalModelCreator();
+
+    void setPointsMover(const QString& mode) override;
 
     void place(Mesh::HardPtr mesh, int radius) override;
     Mesh::HardPtr createMeshFromLayers(const QVector<QVector<vec2i>>& layers) override;

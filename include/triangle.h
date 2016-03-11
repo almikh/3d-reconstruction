@@ -1,5 +1,6 @@
 ﻿#ifndef TRIANGLE_H_INCLUDED__
 #define TRIANGLE_H_INCLUDED__
+
 #include <array>
 #include <vec3.h>
 

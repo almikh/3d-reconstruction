@@ -2,9 +2,7 @@
 
 namespace rn {
   ModelCreator::ModelCreator():
-    using_texturing(false),
-    triangulate_first_layer(false),
-    triangulate_last_layer(false),
+    using_texturing(""),
     merge_models(false)
   {
 
@@ -20,6 +18,11 @@ namespace rn {
 
   void ModelCreator::setSessionData(std::shared_ptr<rn::Session> data) {
     data_ = data;
+  }
+
+  void ModelCreator::setPointsMover(const QString& mode) {
+		Q_UNUSED(mode);
+    Q_ASSERT(false);
   }
 
   void ModelCreator::OnInterruptRequest() {

@@ -10,7 +10,7 @@ SOURCES += \
 	src/main.cpp \ 
 	src/viewport.cpp \
 	src/mainwindow.cpp \
-	src/model-settings-widget.cpp \
+        src/tools-widget.cpp \
 	src/any.cpp \
 	src/mesh.cpp \
 	src/algebra.cpp \
@@ -21,7 +21,7 @@ SOURCES += \
 	src/cylindical-model-creator.cpp \
 	src/session.cpp \
 	src/timer.cpp \
-    src/symmetric-points-mover.cpp
+        src/symmetric-points-mover.cpp
 
 INCLUDEPATH = include
 	
@@ -46,12 +46,12 @@ HEADERS += \
 	include/ellipse-creator.h \
 	include/default-points-mover.h \
 	include/cylindical-model-creator.h \
-	include/model-settings-widget.h \
+        include/tools-widget.h \
 	include/mainwindow.h \
 	include/trackball.h \
 	include/viewport.h \
 	include/session.h \
 	include/timer.h \
-    include/symmetric-points-mover.h
+        include/symmetric-points-mover.h
 		
 CONFIG += c++11

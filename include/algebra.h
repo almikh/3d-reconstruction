@@ -15,6 +15,11 @@ namespace rn {
   vec2<T> round(const vec2<T>& lhs) {
     return vec2<T>(std::round(lhs.x), std::round(lhs.y));
   }
+
+  template <class T>
+  vec3<T> abs(const vec3<T>& value) {
+    return vec3<T>(qAbs(value.x), qAbs(value.y), qAbs(value.z));
+  }
 }
 
 template <class T> 

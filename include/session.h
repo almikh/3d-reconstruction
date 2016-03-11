@@ -1,5 +1,6 @@
 ﻿#ifndef SESSION_H_INCLUDED__
 #define SESSION_H_INCLUDED__
+
 #include <QtOpenGL>
 #include <QVector>
 #include <QImage>

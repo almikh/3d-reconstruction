@@ -248,7 +248,17 @@ public:
     for (int i = 0; i < dim; ++i) temp(i, i) = 1;
     return temp;
   }
+  static matrix<T, dim> scale(T scale) {
+    assert(dim >= 3);
+
+    matrix<T, dim> temp(0);
+    for (int i = 0; i < 3; ++i) temp(i, i) = scale;
+    temp(4, 4) = 1;
+
+    return temp;
+  }
   static matrix<T, dim> translation(const vec3<T>& shift) {
+
     assert(dim >= 4);
     matrix<T, dim> temp(identity());
     temp(3, 0) = shift.x;

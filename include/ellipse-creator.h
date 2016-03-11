@@ -1,5 +1,6 @@
 ﻿#ifndef ELLIPSE_CREATOR_H_INCLUDED__
 #define ELLIPSE_CREATOR_H_INCLUDED__
+
 #include <vec2.h>
 
 namespace rn {

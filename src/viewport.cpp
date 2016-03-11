@@ -22,7 +22,8 @@ namespace rn
   /* Viewport */
   Viewport::Viewport(QWidget* parent) :
     QGLWidget(QGLFormat(QGL::DoubleBuffer | QGL::DepthBuffer | QGL::Rgba), parent),
-    trackball(new Trackball(/*Trackball::VerticalInverse*/))
+    trackball(new Trackball(/*Trackball::VerticalInverse*/)),
+    hide_image(false)
   {
     setMouseTracking(true);
     setAutoBufferSwap(false);
@@ -206,28 +207,27 @@ namespace rn
 
     drawAxis();
 
-    /* рисуем текстуру изображения */
     if (session_) {
       glColor3d(1.0, 1.0, 1.0);
-
-      glPushMatrix();
-      glLoadIdentity();
-      glEnable(GL_TEXTURE_2D);
-
       glBindTexture(GL_TEXTURE_2D, session_->texture());
 
-      int w = session_->width();
-      int h = session_->height();
+      if (!hide_image) { // рисуем текстуру изображения
+        glPushMatrix();
+        glLoadIdentity();
+        glEnable(GL_TEXTURE_2D);
 
-      glBegin(GL_QUADS);
-      glTexCoord2d(0, 0); glVertex3i(-w / 2, h / 2, -w);
-      glTexCoord2d(1, 0); glVertex3i(w / 2, h / 2, -w);
-      glTexCoord2d(1, 1); glVertex3i(w / 2, -h / 2, -w);
-      glTexCoord2d(0, 1); glVertex3i(-w / 2, -h / 2, -w);
-      glEnd();
+        int w = session_->width(), h = session_->height();
 
-      glDisable(GL_TEXTURE_2D);
-      glPopMatrix();
+        glBegin(GL_QUADS);
+        glTexCoord2d(0, 0); glVertex3i(-w / 2, h / 2, -w);
+        glTexCoord2d(1, 0); glVertex3i(w / 2, h / 2, -w);
+        glTexCoord2d(1, 1); glVertex3i(w / 2, -h / 2, -w);
+        glTexCoord2d(0, 1); glVertex3i(-w / 2, -h / 2, -w);
+        glEnd();
+
+        glDisable(GL_TEXTURE_2D);
+        glPopMatrix();
+      }
 
       model_creator->render();
 
@@ -238,7 +238,7 @@ namespace rn
       }
 
       for (auto& mesh : session_->selected_meshes) {
-        mesh->render(vec3b(180, 0, 0));
+        mesh->render(vec3b(180, 0, 0), true, true);
       }
     }
 

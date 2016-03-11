@@ -35,6 +35,7 @@ namespace rn {
   }
 
   void Session::addMesh(Mesh::HardPtr mesh) {
+    mesh->texture_id = texture(); // на всякий случай
     meshes.push_back(mesh);
   }
 

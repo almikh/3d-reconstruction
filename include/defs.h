@@ -1,5 +1,6 @@
 #ifndef DEFS_H_INCLUDED__
 #define DEFS_H_INCLUDED__
+
 #include <stdint.h>
 #include <limits>
 

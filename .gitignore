@@ -12,6 +12,7 @@ Win32/
 # Visual studio files.
 *.sdf
 *.pdb
+*.opensdf
 
 # Compiled Object files
 *.slo

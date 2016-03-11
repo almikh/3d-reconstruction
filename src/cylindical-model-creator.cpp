@@ -20,10 +20,26 @@ namespace rn {
 
   CylindricalModelCreator::CylindricalModelCreator():
     clicks_counter_(0),
-    points_mover_(new SymmetricPointsMover()), // DefaultPointsMover
+    points_mover_(new DefaultPointsMover()),
     basis_(3, vec2i(0, 0))
   {
 
+  }
+
+  void CylindricalModelCreator::setPointsMover(const QString& mode) {
+    if (mode == "Normal") {
+      points_mover_.reset(new DefaultPointsMover());
+      if (data_) {
+        updateMover();
+      }
+    }
+    else if (mode == "Symmetrically") {
+      points_mover_.reset(new SymmetricPointsMover());
+      if (data_) {
+        updateMover();
+      }
+    }
+    else Q_ASSERT(false);
   }
 
   void CylindricalModelCreator::place(Mesh::HardPtr mesh, int radius) {
@@ -67,15 +83,11 @@ namespace rn {
     if (buttons_[Qt::MouseButton::LeftButton]) {
       if (clicks_counter_ < 3) {
         basis_[clicks_counter_++] = offset_mouse_;
-        switch (clicks_counter_) {
-        //case 1:
-        //return FORMING_OBJECT;
-        case 2:
+        if (clicks_counter_ == 2) {
           defInclinationAngle();
-          break;
-        case 3:
+        }
+        else if (clicks_counter_ == 3) {
           toProcessBasis();
-          break;
         }
       }
       else {
@@ -83,8 +95,6 @@ namespace rn {
         //else if (smooth == RN_SMOOTH_USING_LSM) smoothUsingLSM(16);
 
         current_mesh_->anchor_points = prev_layers_;
-        if (triangulate_first_layer) current_mesh_->triangulateFirstLayer();
-        if (triangulate_last_layer) current_mesh_->triangulateLastLayer();
         current_mesh_->updateNormals();
 
         goToOverview();
@@ -109,6 +119,8 @@ namespace rn {
             *current_mesh_ = Mesh::unite(*target.first, *current_mesh_);
           }
         }
+
+        current_mesh_->texture_id = data_->texture();
 
         data_->addMesh(current_mesh_);
         emit signalModelCreated(current_mesh_);
@@ -165,7 +177,7 @@ namespace rn {
     /* Определяем кручение эллипса */
     double a = (basis_[0] - basis_[1]).length();
     double b = Line<int>(basis_[0], basis_[1]).dist(basis_[2]);
-    rotation_angle_ = std::abs(math::Pi_2 - std::acos(b / (a / 2.0)));
+    rotation_angle_ = qAbs(math::Pi_2 - qAcos(b / (a * 0.5)));
     prev_layers_.push_back(basis_);
 
     updateMover();
@@ -196,7 +208,7 @@ namespace rn {
       inclination_angle_ = -inclination_angle_;
     }
 
-    if (abs(inclination_angle_) > math::Pi_2) {
+    if (std::abs(inclination_angle_) > math::Pi_2) {
       inclination_angle_ -= math::Pi * math::sign(static_cast<int>(inclination_angle_));
     }
   }
@@ -226,31 +238,34 @@ namespace rn {
     auto axis = vec3d((base[0] - base[1]).to<double>(), ProjectionPlane::OXY, 0).normalize();
 
     vec3i center = createAABB<int>(src.begin(), src.end()).center();
-    auto rotation_matax = mat3d::rotation(axis, rotation_angle_);
+    auto transform = mat3d::rotation(rn::abs(axis), rotation_angle_);
     for (auto &e : src) {
       e -= center;
-      e = (e.to<double>()*rotation_matax).to<int>() + center;
+      e = (e.to<double>()*transform).to<int>() + center;
     }
 
     std::vector<vec2d> uv;
     int T = src.size() / 2;
     uv.reserve(src.size());
     for (int i = 0; i<src.size(); ++i) {
+      vec3d e;
+      if (using_texturing == "Mirror") { // это если отражать зеркально
+        e = (src[i] - center).to<double>() * 0.98 + center.to<double>();
+
+      }
+      else if (using_texturing == "Cyclically") {  // это если продолжать циклически
+        if (src[i].z >= 0) {
+          e = (src[i] - center).to<double>() * 0.98 + center.to<double>();
+        }
+        else {
+          int index = i + T;
+          e = (src[index % src.size()] - center).to<double>() * 0.98 + center.to<double>();
+        }
+      }
+
       vec2d coord;
-      if (src[i].z >= 0) {
-        auto e = src[i];
-        coord.x = double(e.x + offset.x) / data_->width();
-        coord.y = 1.0 - double(e.y + offset.y) / data_->height();
-      }
-      else {
-        int ind = i + T; //это если отражать зеркально
-        if (ind >= src.size()) ind -= src.size();
-
-        auto e = src[ind];
-        coord.x = double(e.x + offset.x) / data_->width();
-        coord.y = 1.0 - double(e.y + offset.y) / data_->height();
-      }
-
+      coord.x = double(e.x + offset.x) / data_->width();
+      coord.y = 1.0 - double(e.y + offset.y) / data_->height();
       uv.push_back(coord);
     }
 
@@ -262,7 +277,7 @@ namespace rn {
     auto layer = prev_layers_.back();
     double dist = Line<int>(layer[0], layer[1]).dist(offset_mouse_);
 
-    while (std::abs(dist) >= abs(data_->step)) {
+    while (std::abs(dist) >= std::abs(data_->step)) {
       correctStep();
 
       auto layer = prev_layers_.back();
@@ -289,13 +304,14 @@ namespace rn {
       auto ellipse = createLayerPoints(layer);
       mesh->addLayer(ellipse.toStdVector());
 
-      if (using_texturing) {
+      if (using_texturing != "") {
         auto uv = defTexCoord(ellipse, layer);
         mesh->addTexCoords(uv);
       }
     }
 
     mesh->updateNormals();
+    current_mesh_->texture_id = data_->texture();
     return mesh;
   }
 
@@ -312,17 +328,18 @@ namespace rn {
     Q_ASSERT(key_points.size() == 3);
     Q_ASSERT(data_);
 
+    auto axis = vec3d((key_points[0] - key_points[1]).to<double>(), ProjectionPlane::OXY, 0).normalize();
     vec3i center((key_points[0] + key_points[1]) / 2, ProjectionPlane::OXY);
     int a = (key_points[0] - key_points[1]).length() / 2;
 
     EllipseCreator<int> creator(a, a);
     auto source = creator.create(data_->slices);
 
-    mat3d rotation(mat3d::rotZ(inclination_angle_)); // матрица преобразования точки
+    mat3d rotation = mat3d::rotZ(inclination_angle_); // матрица преобразования точки
 
     QVector<vec3i> ellipse;
     ellipse.reserve(source.size());
-    for (auto &e : source) {
+    for (auto& e : source) {
       vec3i vertex(e, ProjectionPlane::OXZ);
       vertex = (vertex.to<double>() * rotation).to<int>() + center;
 

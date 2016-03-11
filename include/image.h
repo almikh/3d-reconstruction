@@ -1,4 +1,6 @@
-﻿#pragma once
+﻿#ifndef IMAGE_H_INCLUDED__
+#define IMAGE_H_INCLUDED__
+
 #include <cmath>
 #include <vector>
 #include <QImage>
@@ -803,3 +805,5 @@ namespace ip {
   typedef Image<bool> matb;
   typedef Image<int> mati;
 }
+
+#endif // IMAGE_H_INCLUDED__

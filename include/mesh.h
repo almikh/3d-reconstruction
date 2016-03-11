@@ -1,14 +1,13 @@
 ﻿#ifndef MESH_H_INCLUDED__
 #define MESH_H_INCLUDED__
-#include <algebra.h>
-#include <triangle.h>
-#include <iostream>
-#include <QVector>
-#include <QRect>
+
 #include <memory>
 #include <vector>
 #include <array>
-#include <set>
+#include <QRect>
+#include <QVector>
+#include <triangle.h>
+#include <algebra.h>
 
 typedef unsigned int GLuint;
 using layer_t = std::pair<int, int>;
@@ -54,7 +53,8 @@ public:
 
   vec3i center() const;
   double dist(const Mesh& other) const;
-  bool fallsInto(const QRect& rect) const;
+  bool fallsInto(const QRect& rect) const; // область модели пересекается с указанным прямоугольником
+  bool contains(const QPoint& point) const; // точка лежит в границах модели
 
   Mesh copy() const;
 
@@ -78,7 +78,7 @@ public:
 
   size_t addTriangle(size_t ind1, size_t ind2, size_t ind3); // индексы вершин
 
-  virtual void render(const vec3b& color = vec3b(70, 130, 180), bool texturing = true) const;
+  virtual void render(const vec3b& color = vec3b(70, 130, 180), bool texturing = true, bool selected = false) const;
 };
 
 #endif // MESH_H_INCLUDED__

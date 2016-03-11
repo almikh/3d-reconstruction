@@ -1,7 +1,7 @@
 ﻿#ifndef VECTOR3_H_INCLUDED__
 #define VECTOR3_H_INCLUDED__
-#include <cmath>
 
+#include <cmath>
 #include <defs.h>
 #include <vec2.h>
 

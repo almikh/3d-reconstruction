@@ -1,5 +1,6 @@
 #ifndef DEFAULT_POINTS_MOVER_H_INCLUDED__
 #define DEFAULT_POINTS_MOVER_H_INCLUDED__
+
 #include <points-mover.h>
 
 class DefaultPointsMover: public PointsMover {

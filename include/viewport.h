@@ -41,6 +41,7 @@ namespace rn
     void drawAxis();
 
   public:
+    bool hide_image;
     Trackball::HardPtr trackball;
     QVector<QPoint> selected_area;
     std::shared_ptr<ModelCreator> model_creator;
