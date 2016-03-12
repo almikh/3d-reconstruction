@@ -32,12 +32,12 @@ ToolsWidget::ToolsWidget(QWidget* parent) :
   cursor->setCheckable(true);
   layout->addWidget(cursor);
 
-  hand = new QPushButton(QIcon("icons/hand.png"), "");
-  hand->setFixedSize(48, 48);
-  hand->setIconSize(QSize(38, 38));
-  hand->setToolTip("Hand mode");
-  hand->setCheckable(true);
-  layout->addWidget(hand);
+  //hand = new QPushButton(QIcon("icons/hand.png"), "");
+  //hand->setFixedSize(48, 48);
+  //hand->setIconSize(QSize(38, 38));
+  //hand->setToolTip("Hand mode");
+  //hand->setCheckable(true);
+  //layout->addWidget(hand);
 
   triangle_first_layer = new QPushButton(QIcon("icons/last-layer.png"), "");
   triangle_first_layer->setFixedSize(48, 48);
@@ -55,7 +55,7 @@ ToolsWidget::ToolsWidget(QWidget* parent) :
   widget->setLayout(layout);
   setCentralWidget(widget);
 
-  setFixedSize(56, 48 * 5 + 4 * 6);
+  setFixedSize(56, 48 * 4 + 4 * 5);
 }
 
 ToolsWidget::~ToolsWidget() {
@@ -65,7 +65,6 @@ ToolsWidget::~ToolsWidget() {
 void ToolsWidget::resetOtherButtons(QPushButton* current) {
   if (create != current) create->setChecked(false);
   if (cursor != current) cursor->setChecked(false);
-  if (hand != current) hand->setChecked(false);
 }
 
 void ToolsWidget::hideEvent(QHideEvent*) {

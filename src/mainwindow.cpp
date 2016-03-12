@@ -62,7 +62,7 @@ MainWindow::MainWindow(QWidget* parent) :
     }
   });
 
-  connect(model_creator_.get(), &rn::ModelCreator::signalModelCreated, this, &MainWindow::slotModelCreated);
+  connect(model_creator_.get(), &rn::ModelCreator::signalBeforeNewModelCreating, this, &MainWindow::slotBeforeNewModelCreating);
 
   connect(viewport_, &rn::Viewport::signalWheelEvent, this, &MainWindow::slotWheelEvent);
   connect(viewport_, &rn::Viewport::signalMouseMoveEvent, this, &MainWindow::slotMouseMoveEvent);
@@ -74,12 +74,8 @@ MainWindow::MainWindow(QWidget* parent) :
   connect(tools_->create, &QPushButton::toggled, creating_toolbar_.toolbar, &QToolBar::setVisible);
   connect(tools_->create, &QPushButton::toggled, this, &MainWindow::slotChangeCreatingMode);
 
-  connect(tools_->cursor, &QPushButton::clicked, this, &MainWindow::slotResetOtherButtons);
   connect(tools_->cursor, &QPushButton::clicked, this, &MainWindow::slotInterruptCreatingProcess);
-
-  connect(tools_->hand, &QPushButton::clicked, this, &MainWindow::slotResetOtherButtons);
-  connect(tools_->hand, &QPushButton::clicked, this, &MainWindow::slotInterruptCreatingProcess);
-  connect(tools_->hand, &QPushButton::toggled, moving_toolbar_.toolbar, &QToolBar::setVisible);
+  connect(tools_->cursor, &QPushButton::toggled, moving_toolbar_.toolbar, &QToolBar::setVisible);
 
   connect(tools_->triangle_first_layer, &QPushButton::clicked, [=](bool) {
     if (!session_) return;
@@ -102,6 +98,11 @@ MainWindow::MainWindow(QWidget* parent) :
 
 MainWindow::~MainWindow() {
 
+}
+
+void MainWindow::setRightPosForTools() {
+  int dy = (height() - centralWidget()->height()) + main_toolbar_.toolbar->height();
+  tools_->move(pos().x() + 8, pos().y() + dy);
 }
 
 bool MainWindow::eventFilter(QObject* o, QEvent* e) {
@@ -165,6 +166,13 @@ void MainWindow::dropEvent(QDropEvent *e) {
   }
 }
 
+void MainWindow::moveEvent(QMoveEvent* e) {
+  QMainWindow::moveEvent(e);
+
+  auto shift = e->pos() - e->oldPos();
+  tools_->move(tools_->pos() + shift);
+}
+
 void MainWindow::createMainToolbar() {
   main_toolbar_.toolbar = addToolBar("Main toolbar");
   main_toolbar_.toolbar->setIconSize(QSize(32, 32));
@@ -174,6 +182,9 @@ void MainWindow::createMainToolbar() {
 
   main_toolbar_.save = main_toolbar_.toolbar->addAction(QIcon("icons/save.png"), ru("Сохранить полученные модели"));
   connect(main_toolbar_.save, SIGNAL(triggered()), SLOT(slotSaveMeshes()));
+
+  main_toolbar_.undo = main_toolbar_.toolbar->addAction(QIcon("icons/undo.png"), ru("Отменить последнее действие"));
+  connect(main_toolbar_.undo, SIGNAL(triggered()), SLOT(slotUndoLastAction()));
 }
 
 void MainWindow::createCreatingToolbar() {
@@ -184,11 +195,22 @@ void MainWindow::createCreatingToolbar() {
   creating_toolbar_.mode = new QComboBox(this);
   creating_toolbar_.mode->setFont(QFont("Arial", 13));
   creating_toolbar_.mode->setFixedWidth(128);
-  creating_toolbar_.mode->setFixedHeight(32);
   creating_toolbar_.mode->addItems({ "Normal", "Symmetrically" });
   creating_toolbar_.toolbar->addWidget(creating_toolbar_.mode);
   connect(creating_toolbar_.mode, &QComboBox::currentTextChanged, [=](const QString& type) {
     model_creator_->setPointsMover(type);
+  });
+
+  creating_toolbar_.toolbar->addSeparator();
+
+  creating_toolbar_.copy = creating_toolbar_.toolbar->addAction(QIcon("icons/copy.png"), ru("Создать копию"));
+  creating_toolbar_.copy->setShortcut(QKeySequence("CTRL+C"));
+  connect(creating_toolbar_.copy, &QAction::triggered, [=](bool checked) {
+    if (session_) {
+      for (auto mesh : session_->selected_meshes) {
+        session_->meshes.push_back(mesh->clone());
+      }
+    }
   });
 
   creating_toolbar_.toolbar->addSeparator();
@@ -216,7 +238,6 @@ void MainWindow::createCreatingToolbar() {
   creating_toolbar_.texturing_mode = new QComboBox(this);
   creating_toolbar_.texturing_mode->setFont(QFont("Arial", 13));
   creating_toolbar_.texturing_mode->setFixedWidth(100);
-  creating_toolbar_.texturing_mode->setFixedHeight(32);
   creating_toolbar_.texturing_mode->addItems({ "Mirror", "Cyclically" });
   creating_toolbar_.texturing_mode->setEnabled(false);
   creating_toolbar_.toolbar->addWidget(creating_toolbar_.texturing_mode);
@@ -234,7 +255,7 @@ void MainWindow::createCreatingToolbar() {
   creating_toolbar_.step->setFont(QFont("Arial", 13));
   creating_toolbar_.step->addItems(generate(1, 15));
   creating_toolbar_.step->setCurrentText("5");
-  creating_toolbar_.step->setFixedWidth(100);
+  creating_toolbar_.step->setFixedWidth(48);
   creating_toolbar_.toolbar->addWidget(creating_toolbar_.step);
 
   creating_toolbar_.toolbar->addSeparator();
@@ -247,7 +268,7 @@ void MainWindow::createCreatingToolbar() {
   creating_toolbar_.slices->setFont(QFont("Arial", 13));
   creating_toolbar_.slices->addItems(generate(4, 360));
   creating_toolbar_.slices->setCurrentText("45");
-  creating_toolbar_.slices->setFixedWidth(100);
+  creating_toolbar_.slices->setFixedWidth(64);
   creating_toolbar_.toolbar->addWidget(creating_toolbar_.slices);
 }
 
@@ -264,14 +285,14 @@ void MainWindow::createMovingToolbar() {
   moving_toolbar_.radius->setFont(QFont("Arial", 13));
   moving_toolbar_.radius->addItems(generate(0, 16));
   moving_toolbar_.radius->setCurrentText("4");
-  moving_toolbar_.radius->setFixedWidth(80);
+  moving_toolbar_.radius->setFixedWidth(64);
   moving_toolbar_.toolbar->addWidget(moving_toolbar_.radius);
 }
 
 void MainWindow::createMenuView() {
   auto menu = menuBar()->addMenu("View");
 
-  auto show_settings = menu->addAction(ru("Главная панель инструментов"));
+  auto show_settings = menu->addAction(ru("Инструменты"));
   show_settings->setIcon(QIcon("icons/main-toolbar.png"));
   show_settings->setCheckable(true);
   show_settings->setChecked(!tools_->isHidden());
@@ -345,6 +366,12 @@ void MainWindow::slotSaveMeshes() {
 
 }
 
+void MainWindow::slotUndoLastAction() {
+  session_->rollback();
+  viewport_->updateGL();
+  main_toolbar_.undo->setEnabled(session_->hasBackups());
+}
+
 void MainWindow::slotOpenImage() {
   askAboutSaving();
   session_.reset();
@@ -387,21 +414,15 @@ void MainWindow::slotChangeCreatingMode(bool checked) {
 }
 
 void MainWindow::slotMousePressEvent(QMouseEvent* event) {
-  if (tools_->create->isChecked() && event->button() == Qt::LeftButton) {
-    model_creator_->onMouseMove(event->x(), event->y());
-    model_creator_->onMousePress(event->button());
-    viewport_->updateGL();
-  }
-  else if (tools_->cursor->isChecked()) {
-    if (event->button() == Qt::RightButton) { // крутим модель
-      static double model_view_matr[16];
-      glGetDoublev(GL_MODELVIEW_MATRIX, model_view_matr);
-
-      viewport_->trackball->setLastMatrix(model_view_matr);
-      viewport_->trackball->click(event->x(), event->y());
-      viewport_->updateGL();
-    }
-    else if (event->button() == Qt::LeftButton) { // выделяем отдельные меши
+  if (tools_->cursor->isChecked()) {
+    //if (!tools_->create->isChecked() && event->button() == Qt::RightButton) { // крутим модель
+    //  static double model_view_matr[16];
+    //  glGetDoublev(GL_MODELVIEW_MATRIX, model_view_matr);
+    //  viewport_->trackball->setLastMatrix(model_view_matr);
+    //  viewport_->trackball->click(event->x(), event->y());
+    //  viewport_->updateGL();
+    //}
+    if (event->button() == Qt::LeftButton) { // выделяем отдельные меши
       auto pos = convertToSceneCoord(event->pos());
 
       session_->selected_meshes.clear();
@@ -421,74 +442,72 @@ void MainWindow::slotMousePressEvent(QMouseEvent* event) {
 
       viewport_->updateGL();
     }
-  }
-  else if (tools_->hand->isChecked() && event->button() == Qt::LeftButton) {
-    // перемещаем выделенные меши
-    if (!session_->selected_meshes.isEmpty()) {
-      shifts_.clear();
-      prev_mouse_ = convertToSceneCoord(event->pos());
-      vec3i mouse(prev_mouse_.x(), prev_mouse_.y(), 0);
-      for (auto mesh : session_->selected_meshes) {
-        shifts_.push_back(mouse - mesh->center());
+    else if (event->button() == Qt::RightButton) { // перемещаем выделенные меши
+      if (!session_->selected_meshes.isEmpty()) {
+        QApplication::setOverrideCursor(QCursor(Qt::SizeAllCursor));
+
+        shifts_.clear();
+        prev_mouse_ = convertToSceneCoord(event->pos());
+        vec3i mouse(prev_mouse_.x(), prev_mouse_.y(), 0);
+        for (auto mesh : session_->selected_meshes) {
+          shifts_.push_back(mouse - mesh->center());
+        }
       }
     }
+  }
+  else if (tools_->create->isChecked() && event->button() == Qt::LeftButton) {
+    model_creator_->onMouseMove(event->x(), event->y());
+    model_creator_->onMousePress(event->button());
+    viewport_->updateGL();
   }
 }
 
 void MainWindow::slotMouseMoveEvent(QMouseEvent* event) {
-  if (tools_->create->isChecked()) {
-    model_creator_->onMouseMove(event->x(), event->y());
-    viewport_->updateGL();
-  }
-  else if (tools_->cursor->isChecked()) {
-    if (event->buttons() & Qt::RightButton) { // крутим модель
-      if (viewport_->trackball->isClicked()) {
-        viewport_->trackball->rotate(event->x(), event->y());
-
-        glLoadIdentity();
-        glMultMatrixf(viewport_->trackball->getMat());
-
-        viewport_->updateGL();
-      }
-    }
-    else if (event->buttons() & Qt::LeftButton) { // выделяем отдельные меши
+  if (tools_->cursor->isChecked()) {
+    //if (!tools_->create->isChecked() && event->buttons() & Qt::RightButton) { // крутим модель
+    //  if (viewport_->trackball->isClicked()) {
+    //    viewport_->trackball->rotate(event->x(), event->y());
+    //    glLoadIdentity();
+    //    glMultMatrixf(viewport_->trackball->getMat());
+    //    viewport_->updateGL();
+    //  }
+    //}
+    if (event->buttons() & Qt::LeftButton) { // выделяем отдельные меши
       if (!viewport_->selected_area.isEmpty()) {
         viewport_->selected_area.pop_back();
         viewport_->selected_area.push_back(convertToSceneCoord(event->pos()));
         viewport_->updateGL();
       }
     }
-  }
-  else if (tools_->hand->isChecked() && (event->buttons() & Qt::LeftButton)) {
-    // перемещаем выделенные меши
-    if (!session_->selected_meshes.isEmpty()) {
-      Q_ASSERT(!shifts_.isEmpty());
-      auto current_pos = convertToSceneCoord(event->pos());
-      if (prev_mouse_ != current_pos) {
-        for (auto mesh : session_->selected_meshes) {
-          auto diff = current_pos - prev_mouse_;
-          mesh->move(vec3i(diff.x(), diff.y(), 0));
-        }
+    else if (event->buttons() & Qt::RightButton) { // перемещаем выделенные меши
+      if (!session_->selected_meshes.isEmpty()) {
+        Q_ASSERT(!shifts_.isEmpty());
+        auto current_pos = convertToSceneCoord(event->pos());
+        if (prev_mouse_ != current_pos) {
+          for (auto mesh : session_->selected_meshes) {
+            auto diff = current_pos - prev_mouse_;
+            mesh->move(vec3i(diff.x(), diff.y(), 0));
+          }
 
-        prev_mouse_ = current_pos;
-        viewport_->updateGL();
+          prev_mouse_ = current_pos;
+          viewport_->updateGL();
+        }
       }
     }
+  }
+  else if (tools_->create->isChecked()) {
+    model_creator_->onMouseMove(event->x(), event->y());
+    viewport_->updateGL();
   }
 }
 
 void MainWindow::slotMouseReleaseEvent(QMouseEvent* event) {
-  if (tools_->create->isChecked() && event->button() == Qt::LeftButton) {
-    model_creator_->onMouseMove(event->x(), event->y());
-    model_creator_->onMouseRelease(event->button());
-    viewport_->updateGL();
-  }
-  else if (tools_->cursor->isChecked()) {
-    if (event->button() == Qt::RightButton) { // крутим модель
-      viewport_->trackball->release();
-      viewport_->updateGL();
-    }
-    else if (event->button() == Qt::LeftButton) { // выделяем отдельные меши
+  if (tools_->cursor->isChecked()) {
+    //if (!tools_->create->isChecked() && event->button() == Qt::RightButton) { // крутим модель
+    //  viewport_->trackball->release();
+    //  viewport_->updateGL();
+    //}
+    if (event->button() == Qt::LeftButton) { // выделяем отдельные меши
       if (viewport_->selected_area.size() > 1) {
         viewport_->selected_area.pop_back();
         viewport_->selected_area.push_back(convertToSceneCoord(event->pos()));
@@ -509,21 +528,39 @@ void MainWindow::slotMouseReleaseEvent(QMouseEvent* event) {
         viewport_->updateGL();
       }
     }
-  }
-  else if (tools_->hand->isChecked() && event->button() == Qt::LeftButton) {
-    // перемещаем выделенные меши
-    int radius = moving_toolbar_.radius->currentText().toInt();
-    for (auto mesh : session_->selected_meshes) {
-      model_creator_->place(mesh, radius);
-    }
+    else if (event->button() == Qt::RightButton) { // перемещаем выделенные меши
+      if (!session_->selected_meshes.isEmpty()) {
+        QApplication::restoreOverrideCursor();
+        slotBeforeNewModelCreating();
 
-    shifts_.clear();
+        QList<Mesh::HardPtr> changed_meshes; // нужно для механизма UNDO
+        int radius = moving_toolbar_.radius->currentText().toInt();
+        for (auto mesh : session_->selected_meshes) {
+          auto new_mesh = mesh->clone();
+          session_->meshes.removeOne(mesh);
+          changed_meshes.push_back(new_mesh);
+          model_creator_->place(new_mesh, radius);
+          session_->meshes.push_back(new_mesh);
+        }
+
+        // теперь выделенными являются обновленные меши
+        session_->selected_meshes = changed_meshes;
+
+        shifts_.clear();
+        viewport_->updateGL();
+      }
+    }
+  }
+  else if (tools_->create->isChecked() && event->button() == Qt::LeftButton) {
+    model_creator_->onMouseMove(event->x(), event->y());
+    model_creator_->onMouseRelease(event->button());
     viewport_->updateGL();
   }
 }
 
-void MainWindow::slotModelCreated(Mesh::HardPtr mesh) {
-  //tools_->create->setChecked(false);
+void MainWindow::slotBeforeNewModelCreating() {
+  session_->commit();
+  main_toolbar_.undo->setEnabled(true);
 }
 
 void MainWindow::slotInterruptCreatingProcess() {
@@ -532,9 +569,9 @@ void MainWindow::slotInterruptCreatingProcess() {
   auto sender = qobject_cast<QPushButton*>(QObject::sender());
   bool checked = sender->isChecked();
 
-  bool need_interrupt = !checked && sender == tools_->create;
-  need_interrupt |= checked && sender != tools_->create;
-  if (need_interrupt) {
+  bool need_interrupt = (sender == tools_->create) && !checked;
+  need_interrupt |= (sender != tools_->create) && checked;
+  if (!checked) {
     model_creator_->OnInterruptRequest();
     viewport_->updateGL();
   }

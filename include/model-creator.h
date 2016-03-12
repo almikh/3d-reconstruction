@@ -43,7 +43,7 @@ namespace rn {
     virtual void render() {};
 
   signals:
-    void signalModelCreated(Mesh::HardPtr mesh);
+    void signalBeforeNewModelCreating();
   };
 }
 

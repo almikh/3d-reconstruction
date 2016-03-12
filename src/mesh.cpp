@@ -138,77 +138,77 @@ bool Mesh::contains(const QPoint& point) const {
   return false;
 }
 
-Mesh Mesh::copy() const {
-  Mesh mesh;
-  mesh.layers_ = layers_;
-  mesh.vertices = vertices;
-  mesh.triangles = triangles;
-  mesh.texture_id = texture_id;
-  mesh.anchor_points = anchor_points;
-  mesh.bottom_cover_ = bottom_cover_;
-  mesh.top_cover_ = top_cover_;
+Mesh::HardPtr Mesh::clone() const {
+  Mesh::HardPtr mesh(new Mesh());
+  mesh->layers_ = layers_;
+  mesh->vertices = vertices;
+  mesh->triangles = triangles;
+  mesh->texture_id = texture_id;
+  mesh->anchor_points = anchor_points;
+  mesh->bottom_cover_ = bottom_cover_;
+  mesh->top_cover_ = top_cover_;
 
   return mesh;
 }
 
-Mesh Mesh::unite(const Mesh& first, const Mesh& second) {
-  auto near_layers = findNearestLayers(first, second);
+Mesh::HardPtr Mesh::unite(const Mesh::HardPtr& first, const Mesh::HardPtr& second) {
+  auto near_layers = findNearestLayers(*first, *second);
 
-  int vertices_count = static_cast<int>(first.vertices.size());
-  auto triangles_copy = second.triangles;
+  int vertices_count = static_cast<int>(first->vertices.size());
+  auto triangles_copy = second->triangles;
   for (auto &e : triangles_copy) {
     e[0] += vertices_count;
     e[1] += vertices_count;
     e[2] += vertices_count;
   }
 
-  auto layers_copy = second.layers_;
+  auto layers_copy = second->layers_;
   for (auto &e : layers_copy) {
     e.first += vertices_count;
     e.second += vertices_count;
   }
 
-  Mesh dst;
+  Mesh::HardPtr dst(new Mesh());
 
   // выбираем ненулевую текстуру, если она есть
-  dst.texture_id = first.texture_id ? first.texture_id : second.texture_id;
+  dst->texture_id = first->texture_id ? first->texture_id : second->texture_id;
 
-  dst.vertices.insert(dst.vertices.end(), first.vertices.begin(), first.vertices.end());
-  dst.vertices.insert(dst.vertices.end(), second.vertices.begin(), second.vertices.end());
+  dst->vertices.insert(dst->vertices.end(), first->vertices.begin(), first->vertices.end());
+  dst->vertices.insert(dst->vertices.end(), second->vertices.begin(), second->vertices.end());
 
-  dst.triangles.insert(dst.triangles.end(), first.triangles.begin(), first.triangles.end());
-  dst.triangles.insert(dst.triangles.end(), triangles_copy.begin(), triangles_copy.end());
+  dst->triangles.insert(dst->triangles.end(), first->triangles.begin(), first->triangles.end());
+  dst->triangles.insert(dst->triangles.end(), triangles_copy.begin(), triangles_copy.end());
 
-  dst.tex_coord_.insert(dst.tex_coord_.end(), first.tex_coord_.begin(), first.tex_coord_.end());
-  dst.tex_coord_.insert(dst.tex_coord_.end(), second.tex_coord_.begin(), second.tex_coord_.end());
+  dst->tex_coord_.insert(dst->tex_coord_.end(), first->tex_coord_.begin(), first->tex_coord_.end());
+  dst->tex_coord_.insert(dst->tex_coord_.end(), second->tex_coord_.begin(), second->tex_coord_.end());
 
-  dst.anchor_points << first.anchor_points;
-  dst.anchor_points << second.anchor_points;
+  dst->anchor_points << first->anchor_points;
+  dst->anchor_points << second->anchor_points;
 
   if (near_layers.first == 0) {
     // для первого - слои в обратном порядке
-    dst.layers_.insert(dst.layers_.end(), first.layers_.rbegin(), first.layers_.rend());
+    dst->layers_.insert(dst->layers_.end(), first->layers_.rbegin(), first->layers_.rend());
     if (near_layers.second == 0) {
-      dst.layers_.insert(dst.layers_.end(), layers_copy.begin(), layers_copy.end());
+      dst->layers_.insert(dst->layers_.end(), layers_copy.begin(), layers_copy.end());
     }
     else {
       // для второго - слои в обратном порядке
-      dst.layers_.insert(dst.layers_.end(), layers_copy.rbegin(), layers_copy.rend());
+      dst->layers_.insert(dst->layers_.end(), layers_copy.rbegin(), layers_copy.rend());
     }
   }
   else {
-    dst.layers_.insert(dst.layers_.end(), first.layers_.begin(), first.layers_.end());
+    dst->layers_.insert(dst->layers_.end(), first->layers_.begin(), first->layers_.end());
     if (near_layers.second == 0) {
-      dst.layers_.insert(dst.layers_.end(), layers_copy.begin(), layers_copy.end());
+      dst->layers_.insert(dst->layers_.end(), layers_copy.begin(), layers_copy.end());
     }
     else {
-      dst.layers_.insert(dst.layers_.end(), layers_copy.rbegin(), layers_copy.rend());
+      dst->layers_.insert(dst->layers_.end(), layers_copy.rbegin(), layers_copy.rend());
     }
   }
 
   // промежуточная часть между моделями - нужно ее триангулировать
-  dst.triangleLayers(dst.layers_[first.layers_.size() - 1], dst.layers_[first.layers_.size()]);
-  dst.updateNormals();
+  dst->triangleLayers(dst->layers_[first->layers_.size() - 1], dst->layers_[first->layers_.size()]);
+  dst->updateNormals();
   return dst;
 }
 

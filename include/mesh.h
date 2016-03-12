@@ -43,7 +43,7 @@ public:
 
   Mesh() = default;
 
-  static Mesh unite(const Mesh& first, const Mesh& second);
+  static Mesh::HardPtr unite(const Mesh::HardPtr& first, const Mesh::HardPtr& second);
 
   void saveAsObj(const char* file);
 
@@ -56,7 +56,7 @@ public:
   bool fallsInto(const QRect& rect) const; // область модели пересекается с указанным прямоугольником
   bool contains(const QPoint& point) const; // точка лежит в границах модели
 
-  Mesh copy() const;
+  Mesh::HardPtr clone() const;
 
   vec3i& operator[](int index);
   const vec3i& operator[](int index) const;

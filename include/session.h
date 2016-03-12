@@ -48,6 +48,10 @@ namespace rn {
     Session(const QImage& image, QGLWidget* parent);
     ~Session();
 
+    void commit();
+    void rollback();
+    bool hasBackups() const;
+
     void invertStep();
     void addMesh(Mesh::HardPtr mesh);
     void setLastLayer(const QVector<vec2i>& layer);

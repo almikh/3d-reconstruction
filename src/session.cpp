@@ -30,6 +30,22 @@ namespace rn {
     parent_->deleteTexture(gvf_texture_);
   }
 
+  void Session::commit() {
+    backups_.push_back(meshes);
+  }
+
+  void Session::rollback() {
+    Q_ASSERT(!backups_.isEmpty());
+
+    selected_meshes.clear();
+    meshes = backups_.back();
+    backups_.pop_back();
+  }
+
+  bool Session::hasBackups() const {
+    return !backups_.isEmpty();
+  }
+
   void Session::invertStep() {
     step = -step;
   }

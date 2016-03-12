@@ -94,6 +94,8 @@ namespace rn {
         //if (smooth == RN_SMOOTH_USING_ABERAGING) smoothUsingAveraging();
         //else if (smooth == RN_SMOOTH_USING_LSM) smoothUsingLSM(16);
 
+        emit signalBeforeNewModelCreating();
+
         current_mesh_->anchor_points = prev_layers_;
         current_mesh_->updateNormals();
 
@@ -116,14 +118,13 @@ namespace rn {
             }
 
             data_->meshes.removeOne(target.first);
-            *current_mesh_ = Mesh::unite(*target.first, *current_mesh_);
+            current_mesh_ = Mesh::unite(target.first, current_mesh_);
           }
         }
 
         current_mesh_->texture_id = data_->texture();
 
         data_->addMesh(current_mesh_);
-        emit signalModelCreated(current_mesh_);
         current_mesh_.reset();
       }
     }

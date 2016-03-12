@@ -33,6 +33,7 @@ private:
     QToolBar* toolbar;
     QAction* open;
     QAction* save;
+    QAction* undo;
 
   } main_toolbar_;
 
@@ -45,6 +46,7 @@ private:
     QAction* texturing;
     QComboBox* texturing_mode;
     QAction* unite_meshes;
+    QAction* copy;
   } creating_toolbar_;
 
   struct {
@@ -72,16 +74,21 @@ public:
   explicit MainWindow(QWidget* parent = nullptr);
   ~MainWindow();
 
-  void showEvent(QShowEvent*);
+  void setRightPosForTools(); // установит правильную позицию виджету инструментов
+
+  void showEvent(QShowEvent* e) override;
   void keyPressEvent(QKeyEvent* event) override;
   void keyReleaseEvent(QKeyEvent* event) override;
 
   void dragEnterEvent(QDragEnterEvent* e) override;
   void dropEvent(QDropEvent* e) override;
 
+  void moveEvent(QMoveEvent* e) override;
+
 private slots:
   void slotOpenImage();
   void slotSaveMeshes();
+  void slotUndoLastAction();
 
   void slotChangeCreatingMode(bool checked);
 
@@ -89,7 +96,7 @@ private slots:
   void slotMouseMoveEvent(QMouseEvent* event);
   void slotMousePressEvent(QMouseEvent* event);
   void slotMouseReleaseEvent(QMouseEvent* event);
-  void slotModelCreated(Mesh::HardPtr mesh);
+  void slotBeforeNewModelCreating();
 
   void slotInterruptCreatingProcess();
   void slotResetOtherButtons();
