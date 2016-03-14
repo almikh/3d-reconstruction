@@ -2,14 +2,15 @@
 #include <cmath>
 
 namespace rn {
-  Session::Session(const QImage& image, QGLWidget* parent) :
+  Session::Session(const QImage& src, QGLWidget* parent) :
     parent_(parent),
     slices(16),
     step(4),
-    image(image)
+    image(src)
   {
     Q_ASSERT(parent_);
 
+    image = image.scaled(MIN_SCENE_WIDTH * 0.85, MIN_SCENE_HEIGHT * 0.85, Qt::KeepAspectRatio);
     //image_ = image_.convertToFormat(QImage::Format_RGB888);
 
     ip::Image<double> source(image);

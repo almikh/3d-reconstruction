@@ -1,4 +1,5 @@
 ﻿#include <points-mover.h>
+#include <qdebug.h>
 
 PointsMover::~PointsMover() {
 

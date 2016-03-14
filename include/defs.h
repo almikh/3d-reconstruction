@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <limits>
 
-using Int = std::numeric_limits<double>;
+using Int = std::numeric_limits<int>;
 using Double = std::numeric_limits<double>;
 
 template<class T>

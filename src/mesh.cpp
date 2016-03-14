@@ -144,6 +144,7 @@ Mesh::HardPtr Mesh::clone() const {
   mesh->vertices = vertices;
   mesh->triangles = triangles;
   mesh->texture_id = texture_id;
+  mesh->tex_coord_ = tex_coord_;
   mesh->anchor_points = anchor_points;
   mesh->bottom_cover_ = bottom_cover_;
   mesh->top_cover_ = top_cover_;

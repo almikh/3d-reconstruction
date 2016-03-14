@@ -49,7 +49,8 @@ MainWindow::MainWindow(QWidget* parent) :
   createMenuView();
 
   setAcceptDrops(true);
-  resize(800, 600);
+  setMinimumSize(MIN_SCENE_WIDTH, MIN_SCENE_HEIGHT);
+  resize(MIN_SCENE_WIDTH, MIN_SCENE_HEIGHT);
 
   connect(creating_toolbar_.slices, &QComboBox::currentTextChanged, [=](const QString& value) {
     if (session_) {

@@ -11,7 +11,7 @@ void DefaultPointsMover::move(QVector<vec2i>& points)  {
     int viewed = 1;
     vec2i& point = points[index];
     point += offset_ + rn::round(growth_dir_ * growth_length_).to<int>();
-    Q_ASSERT(grad_->isCorrect(point.x, point.y));
+    if (!grad_->isCorrect(point.x, point.y)) break;
 
     int ind;
     for (;;) {

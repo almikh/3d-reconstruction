@@ -171,7 +171,6 @@ namespace rn {
 
   void CylindricalModelCreator::toProcessBasis() {
     // Создаем новый объект */
-    //data_->backup();
     current_mesh_.reset(new Mesh());
     current_mesh_->texture_id = data_->texture();
 
@@ -215,8 +214,6 @@ namespace rn {
   }
 
   void CylindricalModelCreator::toSpecify(QVector<vec2i>& points, vec2d normal, double length, vec2d* dir) {
-    //Q_ASSERT(points.size() == 2);
-
     // нужен для пересчета сцены модели в координаты изображения, где (0, 0) - в нижнем левом углу
     vec2i offset = data_->screenCenter() - data_->offsets;
 
@@ -278,11 +275,37 @@ namespace rn {
     auto layer = prev_layers_.back();
     double dist = Line<int>(layer[0], layer[1]).dist(offset_mouse_);
 
+    auto calc_bounding_box = [](const QVector<QVector<vec2i>>& points) -> QPair<vec2i, vec2i> {
+      if (points.isEmpty()) {
+        return qMakePair(vec2i(0, 0), vec2i(0, 0));
+      }
+
+      QPair<vec2i, vec2i> box {
+        vec2i(Int::max(), Int::max()),
+            vec2i(Int::min(), Int::min())
+      };
+
+      for (auto& layer : points) {
+        for (auto& point : layer) {
+          box.first.x = qMin(box.first.x, point.x);
+          box.first.y = qMin(box.first.y, point.y);
+          box.second.x = qMax(box.second.x, point.x);
+          box.second.y = qMax(box.second.y, point.y);
+        }
+      }
+
+      return box;
+    };
+    auto calc_square = [](const QPair<vec2i, vec2i>& area) {
+      return qAbs((area.second.x - area.first.x) * (area.second.y - area.first.y));
+    };
+
+    int prev_square = calc_square(calc_bounding_box(prev_layers_));
     while (std::abs(dist) >= std::abs(data_->step)) {
       correctStep();
 
       auto layer = prev_layers_.back();
-      auto n = Line<int>(layer[0], layer[1]).normal().to<double>().normalize();
+      auto n = Line<int>(basis_[0], basis_[1]).normal().to<double>().normalize();
 
       toSpecify(layer, n, data_->step);
       if ((layer[0] - layer[1]).length() < 1.0) {
@@ -292,6 +315,13 @@ namespace rn {
       layer[2] = layer[0] + (basis_[2] - basis_[0]);
       prev_layers_.push_back(layer);
 
+      int square = calc_square(calc_bounding_box(prev_layers_));
+      if (prev_square == square) { // габариты не изменились - что-то не так
+        prev_layers_.pop_back(); // последний слой ничего не изменил, отбросим его
+        break;
+      }
+
+      prev_square = square;
       dist = Line<int>(layer[0], layer[1]).dist(offset_mouse_);
     }
 
@@ -336,7 +366,7 @@ namespace rn {
     EllipseCreator<int> creator(a, a);
     auto source = creator.create(data_->slices);
 
-    mat3d rotation = mat3d::rotZ(inclination_angle_); // матрица преобразования точки
+    mat3d rotation = mat3d::rotZ(-inclination_angle_); // матрица преобразования точки
 
     QVector<vec3i> ellipse;
     ellipse.reserve(source.size());
