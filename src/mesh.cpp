@@ -64,6 +64,28 @@ void Mesh::clear() {
   tex_coord_.clear();
 }
 
+Mesh& Mesh::mirror(int anchor) {
+  if (!anchor) {
+    anchor = center().x;
+  }
+
+  bottom_cover_.vertex.x = anchor - (bottom_cover_.vertex.x - anchor);
+  top_cover_.vertex.x = anchor - (top_cover_.vertex.x - anchor);
+
+  for (auto& e : vertices) {
+    e.x = anchor - (e.x - anchor);
+  }
+
+  for (auto &layer : anchor_points) {
+    for (auto &e : layer) {
+      e.x = anchor - (e.x - anchor);
+    }
+  }
+
+  updateNormals();
+  return *this;
+}
+
 Mesh& Mesh::swap(Mesh* mesh) {
   std::swap(texture_id, mesh->texture_id);
   anchor_points.swap(mesh->anchor_points);
@@ -251,6 +273,18 @@ vec3i& Mesh::vert(int index) {
 
 const vec3i& Mesh::vert(int index) const {
   return (*this)[index];
+}
+
+vec2d& Mesh::tex(int index) {
+  if (index == BOTTOM_VERT_INDEX) index = bottom_cover_.triangles.front()[0];
+  else if (index == TOP_VERT_INDEX) index = top_cover_.triangles.front()[0];
+  return tex_coord_[index];
+}
+
+const vec2d& Mesh::tex(int index) const {
+  if (index == BOTTOM_VERT_INDEX) index = bottom_cover_.triangles.front()[0];
+  else if (index == TOP_VERT_INDEX) index = top_cover_.triangles.front()[0];
+  return tex_coord_[index];
 }
 
 vec3i& Mesh::operator[](int index) {
@@ -441,25 +475,20 @@ void Mesh::render(const vec3b& color, bool texturing, bool selected) const {
   triangles.insert(triangles.end(), bottom_cover_.triangles.begin(), bottom_cover_.triangles.end());
   glBegin(GL_TRIANGLES);
   for (auto& tri : triangles) {
-    bool has_tex_coord = false;
-    if (use_texture && tri[2] != BOTTOM_VERT_INDEX && tri[2] != TOP_VERT_INDEX) {
-      has_tex_coord = true;
-      glColor3ub(255, 255, 255);
-    }
-    else {
-      glColor3ubv(color.coords); // для верхней и нижней крышки текстурирование отключим
-    }
+    if (selected) glColor3ub(255, 0, 0);
+    else if (use_texture) glColor3ub(255, 255, 255);
+    else glColor3ubv(color.coords);
 
     glNormal3dv(tri.normal.coords);
-    if (use_texture && has_tex_coord) glTexCoord2dv(tex_coord_[tri[0]].coords);
+    if (use_texture) glTexCoord2dv(tex(tri[0]).coords);
     glVertex3iv(mesh[tri[0]].coords);
 
     glNormal3dv(tri.normal.coords);
-    if (use_texture && has_tex_coord) glTexCoord2dv(tex_coord_[tri[1]].coords);
+    if (use_texture) glTexCoord2dv(tex(tri[1]).coords);
     glVertex3iv(mesh[tri[1]].coords);
 
     glNormal3dv(tri.normal.coords);
-    if (use_texture && has_tex_coord) glTexCoord2dv(tex_coord_[tri[2]].coords);
+    if (use_texture) glTexCoord2dv(tex(tri[2]).coords);
     glVertex3iv(mesh[tri[2]].coords);
   }
   glEnd();
@@ -471,10 +500,10 @@ void Mesh::render(const vec3b& color, bool texturing, bool selected) const {
   glDisable(GL_LIGHTING);
   glDisable(GL_NORMALIZE);
 
+#ifndef NDEBUG
   if (selected && use_texture) {
     glLineWidth(5);
     glColor3d(1, 0, 0);
-
     glBegin(GL_LINE_STRIP);
     for(auto &e: anchor_points) glVertex2iv(e[0].coords);
     glEnd();
@@ -483,5 +512,6 @@ void Mesh::render(const vec3b& color, bool texturing, bool selected) const {
     glEnd();
     glLineWidth(1);
   }
+#endif
   glColor3d(1, 1, 1);
 }

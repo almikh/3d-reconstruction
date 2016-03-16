@@ -46,6 +46,7 @@ private:
     QAction* texturing;
     QComboBox* texturing_mode;
     QAction* unite_meshes;
+    QAction* mirror;
     QAction* copy;
   } creating_toolbar_;
 
@@ -97,6 +98,7 @@ private slots:
   void slotMousePressEvent(QMouseEvent* event);
   void slotMouseReleaseEvent(QMouseEvent* event);
   void slotBeforeNewModelCreating();
+  void slotMirrorSelectedMeshes();
 
   void slotInterruptCreatingProcess();
   void slotResetOtherButtons();

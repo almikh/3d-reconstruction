@@ -27,6 +27,8 @@ class Mesh {
 private:
   vec3i& vert(int index);
   const vec3i& vert(int index) const;
+  vec2d& tex(int index);
+  const vec2d& tex(int index) const;
 
   static std::pair<int, int> findNearestLayers(const Mesh& first, const Mesh& second);
 
@@ -48,6 +50,7 @@ public:
   void saveAsObj(const char* file);
 
   void clear();
+  Mesh& mirror(int anchor = 0); // если anchor = 0 - используется центральная ось модели
   Mesh& swap(Mesh* mesh);
   Mesh& move(const vec3i& diff);
 

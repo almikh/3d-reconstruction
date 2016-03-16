@@ -77,6 +77,12 @@ MainWindow::MainWindow(QWidget* parent) :
 
   connect(tools_->cursor, &QPushButton::clicked, this, &MainWindow::slotInterruptCreatingProcess);
   connect(tools_->cursor, &QPushButton::toggled, moving_toolbar_.toolbar, &QToolBar::setVisible);
+  connect(tools_->cursor, &QPushButton::clicked, [=](bool checked) {
+    if (!checked) {
+      session_->selected_meshes.clear();
+      changeStateOfTriangleButtons();
+    }
+  });
 
   connect(tools_->triangle_first_layer, &QPushButton::clicked, [=](bool) {
     if (!session_) return;
@@ -204,6 +210,12 @@ void MainWindow::createCreatingToolbar() {
 
   creating_toolbar_.toolbar->addSeparator();
 
+  creating_toolbar_.mirror = creating_toolbar_.toolbar->addAction(QIcon("icons/mirror.png"), ru("Отразить по-горизонтали"));
+  creating_toolbar_.mirror->setShortcut(QKeySequence("CTRL+C"));
+  creating_toolbar_.mirror->setEnabled(false);
+  connect(creating_toolbar_.mirror, &QAction::triggered, this, &MainWindow::slotMirrorSelectedMeshes);
+  creating_toolbar_.toolbar->addSeparator();
+
   creating_toolbar_.copy = creating_toolbar_.toolbar->addAction(QIcon("icons/copy.png"), ru("Создать копию"));
   creating_toolbar_.copy->setShortcut(QKeySequence("CTRL+C"));
   connect(creating_toolbar_.copy, &QAction::triggered, [=](bool checked) {
@@ -310,10 +322,12 @@ void MainWindow::createMenuView() {
 
 void MainWindow::changeStateOfTriangleButtons() {
   if (!session_->selected_meshes.isEmpty()) {
+    creating_toolbar_.mirror->setEnabled(true);
     tools_->triangle_last_layer->setEnabled(true);
     tools_->triangle_first_layer->setEnabled(true);
   }
   else {
+    creating_toolbar_.mirror->setEnabled(false);
     tools_->triangle_last_layer->setEnabled(false);
     tools_->triangle_first_layer->setEnabled(false);
   }
@@ -416,14 +430,15 @@ void MainWindow::slotChangeCreatingMode(bool checked) {
 
 void MainWindow::slotMousePressEvent(QMouseEvent* event) {
   if (tools_->cursor->isChecked()) {
-    //if (!tools_->create->isChecked() && event->button() == Qt::RightButton) { // крутим модель
-    //  static double model_view_matr[16];
-    //  glGetDoublev(GL_MODELVIEW_MATRIX, model_view_matr);
-    //  viewport_->trackball->setLastMatrix(model_view_matr);
-    //  viewport_->trackball->click(event->x(), event->y());
-    //  viewport_->updateGL();
-    //}
-    if (event->button() == Qt::LeftButton) { // выделяем отдельные меши
+    auto modifiers = QApplication::keyboardModifiers();
+    if (modifiers == Qt::ControlModifier && event->button() == Qt::RightButton) { // крутим модель
+      static double model_view_matr[16];
+      glGetDoublev(GL_MODELVIEW_MATRIX, model_view_matr);
+      viewport_->trackball->setLastMatrix(model_view_matr);
+      viewport_->trackball->click(event->x(), event->y());
+      viewport_->updateGL();
+    }
+    else if (event->button() == Qt::LeftButton) { // выделяем отдельные меши
       auto pos = convertToSceneCoord(event->pos());
 
       session_->selected_meshes.clear();
@@ -465,15 +480,16 @@ void MainWindow::slotMousePressEvent(QMouseEvent* event) {
 
 void MainWindow::slotMouseMoveEvent(QMouseEvent* event) {
   if (tools_->cursor->isChecked()) {
-    //if (!tools_->create->isChecked() && event->buttons() & Qt::RightButton) { // крутим модель
-    //  if (viewport_->trackball->isClicked()) {
-    //    viewport_->trackball->rotate(event->x(), event->y());
-    //    glLoadIdentity();
-    //    glMultMatrixf(viewport_->trackball->getMat());
-    //    viewport_->updateGL();
-    //  }
-    //}
-    if (event->buttons() & Qt::LeftButton) { // выделяем отдельные меши
+    auto modifiers = QApplication::keyboardModifiers();
+    if (modifiers == Qt::ControlModifier && event->buttons() & Qt::RightButton) { // крутим модель
+      if (viewport_->trackball->isClicked()) {
+        viewport_->trackball->rotate(event->x(), event->y());
+        glLoadIdentity();
+        glMultMatrixf(viewport_->trackball->getMat());
+        viewport_->updateGL();
+      }
+    }
+    else if (event->buttons() & Qt::LeftButton) { // выделяем отдельные меши
       if (!viewport_->selected_area.isEmpty()) {
         viewport_->selected_area.pop_back();
         viewport_->selected_area.push_back(convertToSceneCoord(event->pos()));
@@ -504,11 +520,12 @@ void MainWindow::slotMouseMoveEvent(QMouseEvent* event) {
 
 void MainWindow::slotMouseReleaseEvent(QMouseEvent* event) {
   if (tools_->cursor->isChecked()) {
-    //if (!tools_->create->isChecked() && event->button() == Qt::RightButton) { // крутим модель
-    //  viewport_->trackball->release();
-    //  viewport_->updateGL();
-    //}
-    if (event->button() == Qt::LeftButton) { // выделяем отдельные меши
+    auto modifiers = QApplication::keyboardModifiers();
+    if (modifiers == Qt::ControlModifier && event->button() == Qt::RightButton) { // крутим модель
+      viewport_->trackball->release();
+      viewport_->updateGL();
+    }
+    else if(event->button() == Qt::LeftButton) { // выделяем отдельные меши
       if (viewport_->selected_area.size() > 1) {
         viewport_->selected_area.pop_back();
         viewport_->selected_area.push_back(convertToSceneCoord(event->pos()));
@@ -562,6 +579,33 @@ void MainWindow::slotMouseReleaseEvent(QMouseEvent* event) {
 void MainWindow::slotBeforeNewModelCreating() {
   session_->commit();
   main_toolbar_.undo->setEnabled(true);
+}
+
+void MainWindow::slotMirrorSelectedMeshes() {
+  if (session_) {
+    QList<Mesh::HardPtr> changed_meshes; // нужно для механизма UNDO
+    int symmetry_axis = 0; // если мешей несколько, то отражать будем по средней оси
+    if (session_->selected_meshes.size() > 1) {
+      for (auto mesh : session_->selected_meshes) {
+        symmetry_axis += mesh->center().x;
+      }
+
+      symmetry_axis /= session_->selected_meshes.size();
+    }
+
+    for (auto mesh : session_->selected_meshes) {
+      auto new_mesh = mesh->clone();
+      session_->meshes.removeOne(mesh);
+
+      new_mesh->mirror(symmetry_axis);
+      changed_meshes.push_back(new_mesh);
+      session_->meshes.push_back(new_mesh);
+    }
+
+    // теперь выделенными являются обновленные меши
+    session_->selected_meshes = changed_meshes;
+    viewport_->updateGL();
+  }
 }
 
 void MainWindow::slotInterruptCreatingProcess() {
