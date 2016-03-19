@@ -23,6 +23,7 @@ namespace rn
   Viewport::Viewport(QWidget* parent) :
     QGLWidget(QGLFormat(QGL::DoubleBuffer | QGL::DepthBuffer | QGL::Rgba), parent),
     trackball(new Trackball(/*Trackball::VerticalInverse*/)),
+    show_force_field(false),
     hide_image(false)
   {
     setMouseTracking(true);
@@ -209,7 +210,8 @@ namespace rn
 
     if (session_) {
       glColor3d(1.0, 1.0, 1.0);
-      glBindTexture(GL_TEXTURE_2D, session_->texture());
+      auto texture_id = show_force_field ? session_->gvfTexture() : session_->texture();
+      glBindTexture(GL_TEXTURE_2D, texture_id);
 
       if (!hide_image) { // рисуем текстуру изображения
         glPushMatrix();

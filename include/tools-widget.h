@@ -13,7 +13,7 @@ class ToolsWidget : public QMainWindow {
 public:    
   QPushButton* create;
   QPushButton* cursor;
-  QPushButton* hand;
+  QPushButton* smooth;
 
   QPushButton* triangle_last_layer;
   QPushButton* triangle_first_layer;

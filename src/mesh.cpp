@@ -19,7 +19,7 @@ void Mesh::saveAsObj(const char* file) {
   out << std::endl;
 
   out << "# Текстурные координаты" << std::endl;
-  for (auto &e : tex_coord_) {
+  for (auto &e : tex_coord) {
     out << "vt " << e.x << " " << e.y << " " << std::endl;
   }
   out << std::endl;
@@ -32,8 +32,8 @@ void Mesh::saveAsObj(const char* file) {
 
   out << "# Треугольники" << std::endl;
   /* f v/vt/vn v/vt/vn v/vt/vn */
-  if (tex_coord_.size() > 0) {
-    for (size_t i = 0; i < triangles.size(); ++i) {
+  if (tex_coord.size() > 0) {
+    for (int i = 0; i < triangles.size(); ++i) {
       auto& tri = triangles[i];
       out << "f ";
       out << tri[0] + 1 << "/" << tri[0] + 1 << "/" << i + 1 << " ";
@@ -43,7 +43,7 @@ void Mesh::saveAsObj(const char* file) {
     }
   }
   else {
-    for (size_t i = 0; i < triangles.size(); ++i) {
+    for (int i = 0; i < triangles.size(); ++i) {
       auto& tri = triangles[i];
       out << "f ";
       out << tri[0] + 1 << "//" << i + 1 << " ";
@@ -61,7 +61,7 @@ void Mesh::clear() {
   layers_.clear();
   vertices.clear();
   triangles.clear();
-  tex_coord_.clear();
+  tex_coord.clear();
 }
 
 Mesh& Mesh::mirror(int anchor) {
@@ -69,8 +69,8 @@ Mesh& Mesh::mirror(int anchor) {
     anchor = center().x;
   }
 
-  bottom_cover_.vertex.x = anchor - (bottom_cover_.vertex.x - anchor);
-  top_cover_.vertex.x = anchor - (top_cover_.vertex.x - anchor);
+  bottom_cover.vertex.x = anchor - (bottom_cover.vertex.x - anchor);
+  top_cover.vertex.x = anchor - (top_cover.vertex.x - anchor);
 
   for (auto& e : vertices) {
     e.x = anchor - (e.x - anchor);
@@ -91,19 +91,19 @@ Mesh& Mesh::swap(Mesh* mesh) {
   anchor_points.swap(mesh->anchor_points);
   triangles.swap(mesh->triangles);
   vertices.swap(mesh->vertices);
-  tex_coord_.swap(mesh->tex_coord_);
+  tex_coord.swap(mesh->tex_coord);
   layers_.swap(mesh->layers_);
-  top_cover_.triangles.swap(mesh->top_cover_.triangles);
-  std::swap(top_cover_.vertex, mesh->top_cover_.vertex);
-  bottom_cover_.triangles.swap(mesh->bottom_cover_.triangles);
-  std::swap(bottom_cover_.vertex, mesh->bottom_cover_.vertex);
+  top_cover.triangles.swap(mesh->top_cover.triangles);
+  std::swap(top_cover.vertex, mesh->top_cover.vertex);
+  bottom_cover.triangles.swap(mesh->bottom_cover.triangles);
+  std::swap(bottom_cover.vertex, mesh->bottom_cover.vertex);
 
   return *this;
 }
 
 Mesh& Mesh::move(const vec3i& diff) {
-  bottom_cover_.vertex += diff;
-  top_cover_.vertex += diff;
+  bottom_cover.vertex += diff;
+  top_cover.vertex += diff;
   for (auto& e : vertices) {
     e += diff;
   }
@@ -166,10 +166,10 @@ Mesh::HardPtr Mesh::clone() const {
   mesh->vertices = vertices;
   mesh->triangles = triangles;
   mesh->texture_id = texture_id;
-  mesh->tex_coord_ = tex_coord_;
+  mesh->tex_coord = tex_coord;
   mesh->anchor_points = anchor_points;
-  mesh->bottom_cover_ = bottom_cover_;
-  mesh->top_cover_ = top_cover_;
+  mesh->bottom_cover = bottom_cover;
+  mesh->top_cover = top_cover;
 
   return mesh;
 }
@@ -196,36 +196,42 @@ Mesh::HardPtr Mesh::unite(const Mesh::HardPtr& first, const Mesh::HardPtr& secon
   // выбираем ненулевую текстуру, если она есть
   dst->texture_id = first->texture_id ? first->texture_id : second->texture_id;
 
-  dst->vertices.insert(dst->vertices.end(), first->vertices.begin(), first->vertices.end());
-  dst->vertices.insert(dst->vertices.end(), second->vertices.begin(), second->vertices.end());
+  dst->vertices << first->vertices;
+  dst->vertices << second->vertices;
 
-  dst->triangles.insert(dst->triangles.end(), first->triangles.begin(), first->triangles.end());
-  dst->triangles.insert(dst->triangles.end(), triangles_copy.begin(), triangles_copy.end());
+  dst->triangles << first->triangles;
+  dst->triangles << triangles_copy;;
 
-  dst->tex_coord_.insert(dst->tex_coord_.end(), first->tex_coord_.begin(), first->tex_coord_.end());
-  dst->tex_coord_.insert(dst->tex_coord_.end(), second->tex_coord_.begin(), second->tex_coord_.end());
+  dst->tex_coord << first->tex_coord;
+  dst->tex_coord << second->tex_coord;
 
   dst->anchor_points << first->anchor_points;
   dst->anchor_points << second->anchor_points;
 
+  auto reverse_insert = [](QVector<layer_t>& dst, const QVector<layer_t>& src) {
+    for (int i = src.size() - 1; i >= 0; --i) {
+      dst.push_back(src[src.size() - 1 - i]);
+    }
+  };
+
   if (near_layers.first == 0) {
     // для первого - слои в обратном порядке
-    dst->layers_.insert(dst->layers_.end(), first->layers_.rbegin(), first->layers_.rend());
+    reverse_insert(dst->layers_, first->layers_);
     if (near_layers.second == 0) {
-      dst->layers_.insert(dst->layers_.end(), layers_copy.begin(), layers_copy.end());
+      dst->layers_ << layers_copy;
     }
     else {
       // для второго - слои в обратном порядке
-      dst->layers_.insert(dst->layers_.end(), layers_copy.rbegin(), layers_copy.rend());
+      reverse_insert(dst->layers_, layers_copy);
     }
   }
   else {
-    dst->layers_.insert(dst->layers_.end(), first->layers_.begin(), first->layers_.end());
+    reverse_insert(dst->layers_, first->layers_);
     if (near_layers.second == 0) {
-      dst->layers_.insert(dst->layers_.end(), layers_copy.begin(), layers_copy.end());
+      dst->layers_ << layers_copy;
     }
     else {
-      dst->layers_.insert(dst->layers_.end(), layers_copy.rbegin(), layers_copy.rend());
+      reverse_insert(dst->layers_, layers_copy);
     }
   }
 
@@ -235,8 +241,47 @@ Mesh::HardPtr Mesh::unite(const Mesh::HardPtr& first, const Mesh::HardPtr& secon
   return dst;
 }
 
-std::pair<int, int> Mesh::findNearestLayers(const Mesh& first, const Mesh& second) {
-  std::vector<int> first_covers;
+Mesh::HardPtr Mesh::merge(const Mesh::HardPtr& first, const Mesh::HardPtr& second) {
+  int vertices_count = static_cast<int>(first->vertices.size());
+  auto triangles_copy = second->triangles;
+  for (auto &e : triangles_copy) {
+    e[0] += vertices_count;
+    e[1] += vertices_count;
+    e[2] += vertices_count;
+  }
+
+  auto layers_copy = second->layers_;
+  for (auto &e : layers_copy) {
+    e.first += vertices_count;
+    e.second += vertices_count;
+  }
+
+  Mesh::HardPtr dst(new Mesh());
+
+  // выбираем ненулевую текстуру, если она есть
+  dst->texture_id = first->texture_id ? first->texture_id : second->texture_id;
+
+  dst->vertices << first->vertices;
+  dst->vertices << second->vertices;
+
+  dst->triangles << first->triangles;
+  dst->triangles << triangles_copy;;
+
+  dst->tex_coord << first->tex_coord;
+  dst->tex_coord << second->tex_coord;
+
+  dst->anchor_points << first->anchor_points;
+  dst->anchor_points << second->anchor_points;
+
+  dst->layers_ << first->layers_;
+  dst->layers_ << layers_copy;
+
+  dst->updateNormals();
+  return dst;
+}
+
+QPair<int, int> Mesh::findNearestLayers(const Mesh& first, const Mesh& second) {
+  QVector<int> first_covers;
   auto back_layer_1 = first.layers_.back();
   auto front_layer_1 = first.layers_.front();
   for (int i = front_layer_1.first; i < front_layer_1.second; ++i) first_covers.push_back(i);
@@ -261,7 +306,7 @@ std::pair<int, int> Mesh::findNearestLayers(const Mesh& first, const Mesh& secon
     }
   }
 
-  std::pair<int, int> dst;
+  QPair<int, int> dst;
   dst.first = first.getLayer(f_ind);
   dst.second = second.getLayer(s_ind);
   return dst;
@@ -276,31 +321,31 @@ const vec3i& Mesh::vert(int index) const {
 }
 
 vec2d& Mesh::tex(int index) {
-  if (index == BOTTOM_VERT_INDEX) index = bottom_cover_.triangles.front()[0];
-  else if (index == TOP_VERT_INDEX) index = top_cover_.triangles.front()[0];
-  return tex_coord_[index];
+  if (index == BOTTOM_VERT_INDEX) index = bottom_cover.triangles.front()[0];
+  else if (index == TOP_VERT_INDEX) index = top_cover.triangles.front()[0];
+  return tex_coord[index];
 }
 
 const vec2d& Mesh::tex(int index) const {
-  if (index == BOTTOM_VERT_INDEX) index = bottom_cover_.triangles.front()[0];
-  else if (index == TOP_VERT_INDEX) index = top_cover_.triangles.front()[0];
-  return tex_coord_[index];
+  if (index == BOTTOM_VERT_INDEX) index = bottom_cover.triangles.front()[0];
+  else if (index == TOP_VERT_INDEX) index = top_cover.triangles.front()[0];
+  return tex_coord[index];
 }
 
 vec3i& Mesh::operator[](int index) {
-  if (index == BOTTOM_VERT_INDEX) return bottom_cover_.vertex;
-  else if (index == TOP_VERT_INDEX) return top_cover_.vertex;
+  if (index == BOTTOM_VERT_INDEX) return bottom_cover.vertex;
+  else if (index == TOP_VERT_INDEX) return top_cover.vertex;
   return vertices[index];
 }
 
 const vec3i& Mesh::operator[](int index) const {
-  if (index == BOTTOM_VERT_INDEX) return bottom_cover_.vertex;
-  else if (index == TOP_VERT_INDEX) return top_cover_.vertex;
+  if (index == BOTTOM_VERT_INDEX) return bottom_cover.vertex;
+  else if (index == TOP_VERT_INDEX) return top_cover.vertex;
   return vertices[index];
 }
 
 void Mesh::updateNormals() {
-  auto update_for = [=](std::vector<Trid>& triangles, bool is_cover) {
+  auto update_for = [=](QVector<Trid>& triangles, bool is_cover) {
     for (auto& tri : triangles) {
       vec3d p = vert(tri[0]).to<double>() - vert(tri[1]).to<double>();
       vec3d q = vert(tri[2]).to<double>() - vert(tri[1]).to<double>();
@@ -311,9 +356,8 @@ void Mesh::updateNormals() {
         center = createAABB<int>(vertices.begin(), vertices.end()).center();
       }
       else { // смотрим на центр слоя
-        vertices_t::iterator begin, end; // начало и конец слоя одной из точек
-        auto it = getLayerPoints(getLayer(tri[0])); // слой одной из точек треугольника
-        center = createAABB<int>(it.first, it.second).center();
+        auto layer_it = getLayerPoints(getLayer(tri[0])); // слой одной из точек треугольника
+        center = createAABB<int>(layer_it.first, layer_it.second).center();
       }
 
       // опред. правильное направление нормали - наружу из центра
@@ -324,45 +368,45 @@ void Mesh::updateNormals() {
   };
 
   update_for(triangles, false);
-  update_for(top_cover_.triangles, true);
-  update_for(bottom_cover_.triangles, true);
+  update_for(top_cover.triangles, true);
+  update_for(bottom_cover.triangles, true);
 }
 
 void Mesh::triangulateLastLayer() {
-  top_cover_.need_triangulate = true;
+  top_cover.need_triangulate = true;
 
   auto l = layers_.back();
   auto aabb = createAABB<int>(
         vertices.begin() + l.first,
         vertices.begin() + l.second);
 
-  top_cover_.vertex = aabb.center(); // точка схода вершин последнего слоя
-  top_cover_.triangles.clear();
+  top_cover.vertex = aabb.center(); // точка схода вершин последнего слоя
+  top_cover.triangles.clear();
 
-  // третий индекс - фиктивный, вместо него будет bottom_cover_.first
-  top_cover_.triangles.push_back(Trid(l.second - 1, l.first, TOP_VERT_INDEX));
+  // третий индекс - фиктивный, вместо него будет bottom_cover.first
+  top_cover.triangles.push_back(Trid(l.second - 1, l.first, TOP_VERT_INDEX));
   for (int i = l.first; i < l.second - 1; ++i) {
-    top_cover_.triangles.push_back(Trid(i, i + 1, TOP_VERT_INDEX));
+    top_cover.triangles.push_back(Trid(i, i + 1, TOP_VERT_INDEX));
   }
 
   updateNormals();
 }
 
 void Mesh::triangulateFirstLayer() {
-  bottom_cover_.need_triangulate = true;
+  bottom_cover.need_triangulate = true;
 
   auto l = layers_.front();
   auto aabb = createAABB<int>(
         vertices.begin() + l.first,
         vertices.begin() + l.second);
 
-  bottom_cover_.vertex = aabb.center(); // точка схода вершин последнего слоя
-  bottom_cover_.triangles.clear();
+  bottom_cover.vertex = aabb.center(); // точка схода вершин последнего слоя
+  bottom_cover.triangles.clear();
 
-  // третий индекс - фиктивный, вместо него будет top_cover_.first
-  bottom_cover_.triangles.push_back(Trid(l.second - 1, l.first, BOTTOM_VERT_INDEX));
+  // третий индекс - фиктивный, вместо него будет top_cover.first
+  bottom_cover.triangles.push_back(Trid(l.second - 1, l.first, BOTTOM_VERT_INDEX));
   for (int i = l.first; i < l.second - 1; ++i) {
-    bottom_cover_.triangles.push_back(Trid(i, i + 1, BOTTOM_VERT_INDEX));
+    bottom_cover.triangles.push_back(Trid(i, i + 1, BOTTOM_VERT_INDEX));
   }
 
   updateNormals();
@@ -392,11 +436,11 @@ void Mesh::removeLastLayer() {
   removeLayer(layers_.size() - 1);
 }
 
-void Mesh::addTexCoords(const std::vector<vec2d>& coords) {
-  tex_coord_.insert(tex_coord_.end(), coords.begin(), coords.end());
+void Mesh::addTexCoords(const QVector<vec2d>& coords) {
+  tex_coord << coords;
 }
 
-void Mesh::addLayer(const std::vector<vec3i>& layer) {
+void Mesh::addLayer(const QVector<vec3i>& layer) {
   if (layers_.empty()) {
     newLayer(layer);
     return;
@@ -409,13 +453,13 @@ void Mesh::addLayer(const std::vector<vec3i>& layer) {
   triangleLayers(prevLayer, curLayer);
 }
 
-void Mesh::newLayer(const std::vector<vec3i>& vs) {
-  std::pair<size_t, size_t> layer;
+void Mesh::newLayer(const QVector<vec3i>& vs) {
+  QPair<size_t, size_t> layer;
   layer.first = vertices.size();
   layer.second = layer.first + vs.size();
 
   layers_.push_back(layer);
-  vertices.insert(vertices.end(), vs.begin(), vs.end());
+  vertices << vs;
 }
 
 void Mesh::triangleLayers(const layer_t& first, const layer_t& second) {
@@ -444,8 +488,8 @@ int Mesh::getLayer(int vert_index) const {
   return static_cast<int>(layers_.size()); // нет такого слоя
 }
 
-std::pair<Mesh::vertices_t::iterator, Mesh::vertices_t::iterator> Mesh::getLayerPoints(int layer) {
-  std::pair<Mesh::vertices_t::iterator, Mesh::vertices_t::iterator> dst;
+QPair<Mesh::vertices_t::iterator, Mesh::vertices_t::iterator> Mesh::getLayerPoints(int layer) {
+  QPair<Mesh::vertices_t::iterator, Mesh::vertices_t::iterator> dst;
   dst.first = vertices.begin() + layers_[layer].first;
   dst.second = vertices.begin() + layers_[layer].second;
 
@@ -458,7 +502,7 @@ size_t Mesh::addTriangle(size_t ind1, size_t ind2, size_t ind3) {
 }
 
 void Mesh::render(const vec3b& color, bool texturing, bool selected) const {
-  bool use_texture = texturing && !tex_coord_.empty();
+  bool use_texture = texturing && !tex_coord.empty();
 
   glEnable(GL_NORMALIZE);
   glEnable(GL_LIGHTING);
@@ -471,8 +515,8 @@ void Mesh::render(const vec3b& color, bool texturing, bool selected) const {
   auto& mesh = *this;
 
   auto triangles = mesh.triangles;
-  triangles.insert(triangles.end(), top_cover_.triangles.begin(), top_cover_.triangles.end());
-  triangles.insert(triangles.end(), bottom_cover_.triangles.begin(), bottom_cover_.triangles.end());
+  triangles << top_cover.triangles;
+  triangles << bottom_cover.triangles;
   glBegin(GL_TRIANGLES);
   for (auto& tri : triangles) {
     if (selected) glColor3ub(255, 0, 0);

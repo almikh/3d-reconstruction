@@ -4,25 +4,25 @@
 #include <memory>
 #include <vector>
 #include <array>
+#include <QPair>
 #include <QRect>
 #include <QVector>
 #include <triangle.h>
 #include <algebra.h>
 
 typedef unsigned int GLuint;
-using layer_t = std::pair<int, int>;
-using triangles_t = std::vector<Trid>;
+using layer_t = QPair<int, int>;
+using triangles_t = QVector<Trid>;
 
 class Mesh {
-  std::vector<vec2d> tex_coord_;
-  std::vector<layer_t> layers_;
+  QVector<layer_t> layers_;
 
   // нижняя и верхняя крышки - отдельно, для удобства слияния нескольких мешей
   struct Cover {
     vec3i vertex;
     triangles_t triangles;
     bool need_triangulate = false;
-  } bottom_cover_, top_cover_; // нижняя и верхняя крышки" модели
+  };
 
 private:
   vec3i& vert(int index);
@@ -30,22 +30,28 @@ private:
   vec2d& tex(int index);
   const vec2d& tex(int index) const;
 
-  static std::pair<int, int> findNearestLayers(const Mesh& first, const Mesh& second);
+  static QPair<int, int> findNearestLayers(const Mesh& first, const Mesh& second);
 
 public:
   typedef std::shared_ptr<Mesh> HardPtr;
-  typedef std::vector<vec3i> vertices_t;
+  typedef QVector<vec3i> vertices_t;
   typedef QVector<QVector<vec2i>> triangles_t;
 
 public:
-  std::vector<vec3i> vertices;
-  std::vector<Trid> triangles;
+  QVector<vec3i> vertices;
+  QVector<Trid> triangles;
+  QVector<vec2d> tex_coord;
   QVector<QVector<vec2i>> anchor_points;
+  Cover bottom_cover, top_cover; // нижняя и верхняя крышки" модели
   GLuint texture_id = 0; // идентификатор текстуры для наложения
 
   Mesh() = default;
 
+  // пытается склеить модели по верхней или нижней крышкам
   static Mesh::HardPtr unite(const Mesh::HardPtr& first, const Mesh::HardPtr& second);
+
+  // просто сливает две модели в одну
+  static Mesh::HardPtr merge(const Mesh::HardPtr& first, const Mesh::HardPtr& second);
 
   void saveAsObj(const char* file);
 
@@ -71,13 +77,13 @@ public:
   void removeLayer(int index);
   void removeLastLayer();
   void triangulateLayer(int index);
-  void addTexCoords(const std::vector<vec2d>& coords);
-  void addLayer(const std::vector<vec3i>& layer);
-  void newLayer(const std::vector<vec3i>& vertices);
+  void addTexCoords(const QVector<vec2d>& coords);
+  void addLayer(const QVector<vec3i>& layer);
+  void newLayer(const QVector<vec3i>& vertices);
   void triangleLayers(const layer_t& first, const layer_t& second);
 
   int getLayer(int vert_index) const;
-  std::pair<vertices_t::iterator, vertices_t::iterator> getLayerPoints(int layer);
+  QPair<vertices_t::iterator, vertices_t::iterator> getLayerPoints(int layer);
 
   size_t addTriangle(size_t ind1, size_t ind2, size_t ind3); // индексы вершин
 

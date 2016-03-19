@@ -30,6 +30,13 @@ private:
   QPoint prev_mouse_; // предыдущие координаты мыши
 
   struct {
+    QAction* open;
+    QAction* save;
+    QAction* save_each;
+
+  } menu_file_;
+
+  struct {
     QToolBar* toolbar;
     QAction* open;
     QAction* save;
@@ -63,6 +70,7 @@ private:
   void createCreatingToolbar();
   void createMovingToolbar();
   void createMenuView();
+  void createMenuFile();
 
   void changeStateOfTriangleButtons();
 
@@ -89,6 +97,7 @@ public:
 private slots:
   void slotOpenImage();
   void slotSaveMeshes();
+  void slotSaveEachMeshes();
   void slotUndoLastAction();
 
   void slotChangeCreatingMode(bool checked);

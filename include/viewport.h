@@ -42,6 +42,7 @@ namespace rn
 
   public:
     bool hide_image;
+    bool show_force_field;
     Trackball::HardPtr trackball;
     QVector<QPoint> selected_area;
     std::shared_ptr<ModelCreator> model_creator;

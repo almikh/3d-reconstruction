@@ -27,11 +27,12 @@ namespace rn {
     void defInclinationAngle();
     void toSpecify(QVector<vec2i>& points, vec2d normal = vec2d(0, 0), double length = 0.0, vec2d* dir = nullptr);
 
-    std::vector<vec2d> defTexCoord(QVector<vec3i> src, const QVector<vec2i>& base);
+    QVector<vec2d> defTexCoord(QVector<vec3i> src, const QVector<vec2i>& base);
 
     void updateMesh();
     void goToUpdateMesh();
 
+    void recreate(Mesh::HardPtr mesh, const QVector<QVector<vec2i>>& anchor_points);
     QVector<vec3i> createLayerPoints(const QVector<vec2i>& key_points); // создает слой искомой модели
     QVector<vec2i> createEllipseByThreePoints(const QVector<vec2i>& points);
 
@@ -42,6 +43,9 @@ namespace rn {
     CylindricalModelCreator();
 
     void setPointsMover(const QString& mode) override;
+
+    void smoothWithLSM(Mesh::HardPtr mesh, int ds);
+    void smoothWithAveraging(Mesh::HardPtr mesh);
 
     void place(Mesh::HardPtr mesh, int radius) override;
     Mesh::HardPtr createMeshFromLayers(const QVector<QVector<vec2i>>& layers) override;

@@ -46,6 +46,7 @@ MainWindow::MainWindow(QWidget* parent) :
   createMainToolbar();
   createCreatingToolbar();
   createMovingToolbar();
+  createMenuFile();
   createMenuView();
 
   setAcceptDrops(true);
@@ -81,6 +82,14 @@ MainWindow::MainWindow(QWidget* parent) :
     if (!checked) {
       session_->selected_meshes.clear();
       changeStateOfTriangleButtons();
+    }
+  });
+
+  connect(tools_->smooth, &QPushButton::clicked, [=]() {
+    if (!session_) return;
+    for (auto mesh : session_->selected_meshes) {
+      dynamic_cast<rn::CylindricalModelCreator*>(model_creator_.get())->smoothWithAveraging(mesh);
+      viewport_->updateGL();
     }
   });
 
@@ -192,6 +201,7 @@ void MainWindow::createMainToolbar() {
 
   main_toolbar_.undo = main_toolbar_.toolbar->addAction(QIcon("icons/undo.png"), ru("Отменить последнее действие"));
   connect(main_toolbar_.undo, SIGNAL(triggered()), SLOT(slotUndoLastAction()));
+  main_toolbar_.undo->setShortcut(QKeySequence("CTRL+Z"));
 }
 
 void MainWindow::createCreatingToolbar() {
@@ -218,7 +228,7 @@ void MainWindow::createCreatingToolbar() {
 
   creating_toolbar_.copy = creating_toolbar_.toolbar->addAction(QIcon("icons/copy.png"), ru("Создать копию"));
   creating_toolbar_.copy->setShortcut(QKeySequence("CTRL+C"));
-  connect(creating_toolbar_.copy, &QAction::triggered, [=](bool checked) {
+  connect(creating_toolbar_.copy, &QAction::triggered, [=]() {
     if (session_) {
       for (auto mesh : session_->selected_meshes) {
         session_->meshes.push_back(mesh->clone());
@@ -318,6 +328,38 @@ void MainWindow::createMenuView() {
     if (checked) tools_->show();
     else tools_->hide();
   });
+
+  auto show_force_field = menu->addAction(ru("Показать поле сил"));
+  show_force_field->setIcon(QIcon("icons/grad.png"));
+  show_force_field->setCheckable(true);
+
+  connect(show_force_field, &QAction::triggered, [=](bool checked) {
+    viewport_->show_force_field = checked;
+    viewport_->updateGL();
+  });
+}
+
+void MainWindow::createMenuFile() {
+  auto menu = menuBar()->addMenu("File");
+
+  menu_file_.open = menu->addAction(ru("Открыть"));
+  menu_file_.open->setIcon(QIcon("icons/folder.png"));
+  connect(menu_file_.open, &QAction::triggered, this, &MainWindow::slotOpenImage);
+
+  menu->addSeparator();
+
+  menu_file_.save = menu->addAction(ru("Сохранить"));
+  menu_file_.save->setIcon(QIcon("icons/save.png"));
+  connect(menu_file_.save, &QAction::triggered, this, &MainWindow::slotSaveMeshes);
+
+  menu_file_.save_each = menu->addAction(ru("Сохранить каждую модель в отдельный файл"));
+  menu_file_.save_each->setIcon(QIcon("icons/save-each.png"));
+  connect(menu_file_.save_each, &QAction::triggered, this, &MainWindow::slotSaveEachMeshes);
+
+  menu->addSeparator();
+
+  auto quit = menu->addAction(ru("Выход"));
+  connect(quit, &QAction::triggered, qApp, &QApplication::quit);
 }
 
 void MainWindow::changeStateOfTriangleButtons() {
@@ -378,7 +420,30 @@ QPoint MainWindow::convertToSceneCoord(const QPoint& pos) {
 }
 
 void MainWindow::slotSaveMeshes() {
+  Mesh::HardPtr common = session_->meshes.first();
+  for (int i = 1; i < session_->meshes.size(); ++i) {
+    common = Mesh::merge(common, session_->meshes[i]);
+  }
 
+  QString default_dir = "/";
+  auto caption = ru("Сохранить модель(и) как:");
+  auto path = QFileDialog::getSaveFileName(this, caption, default_dir, ru("Формат OBJ (*.obj);;"));
+  if (path.isEmpty()) return;
+
+  if (!path.endsWith(".obj")) path += ".obj";
+  common->saveAsObj(path.toLocal8Bit().data());
+}
+
+void MainWindow::slotSaveEachMeshes() {
+  for (int i = 0; i < session_->meshes.size(); ++i) {
+    QString default_dir = "/";
+    auto caption = ru("Сохранить модель #%1 как:").arg(i);
+    auto path = QFileDialog::getSaveFileName(this, caption, default_dir, ru("Формат OBJ (*.obj);;"));
+    if (path.isEmpty()) continue;
+
+    if (!path.endsWith(".obj")) path += ".obj";
+    session_->meshes[i]->saveAsObj(path.toLocal8Bit().data());
+  }
 }
 
 void MainWindow::slotUndoLastAction() {

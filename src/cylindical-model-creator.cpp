@@ -5,6 +5,7 @@
 #include <algebra.h>
 #include <line.h>
 #include <aabb.h>
+#include <lsm.h>
 
 template <>
 inline uint qHash(const vec2i& key, uint seed)
@@ -40,6 +41,121 @@ namespace rn {
       }
     }
     else Q_ASSERT(false);
+  }
+
+  void CylindricalModelCreator::recreate(Mesh::HardPtr mesh, const QVector<QVector<vec2i>>& anchor_points) {
+    Mesh::HardPtr new_mesh(mesh->clone());
+    new_mesh->vertices.clear();
+    new_mesh->tex_coord.clear();
+    for (auto layer : anchor_points) {
+      auto ellipse = createLayerPoints(layer);
+      new_mesh->addLayer(ellipse);
+
+      if (using_texturing != "") {
+        auto uv = defTexCoord(ellipse, layer);
+        new_mesh->addTexCoords(uv);
+      }
+    }
+
+    new_mesh->updateNormals();
+    new_mesh->anchor_points = anchor_points;
+    new_mesh->texture_id = data_->texture();
+
+    new_mesh->top_cover = mesh->top_cover;
+    new_mesh->bottom_cover = mesh->bottom_cover;
+    new_mesh->updateNormals();
+    mesh->swap(new_mesh.get());
+  }
+
+  void CylindricalModelCreator::smoothWithLSM(Mesh::HardPtr mesh, int ds) {
+    int steps = mesh->anchor_points.size() / ds;
+    auto anchor_points = mesh->anchor_points;
+    QVector<double> xs, ys;
+    xs.reserve(ds * 2);
+    ys.reserve(ds * 2);
+
+    for (int i = 1; i < mesh->anchor_points.size() - 1; ++i) {
+      auto prev = mesh->anchor_points[i - 1];
+      auto cur = mesh->anchor_points[i];
+      auto next = mesh->anchor_points[i + 1];
+
+
+    }
+
+    //for (int i = 0; i <= steps; ++i) {
+    //	if (i == steps) {
+    //		ds = mPrevLayers.size() - steps*ds;
+    //		if (ds<4) goto BUILD;
+    //	}
+
+    //	int maxDistX = -(DBL_MAX - 1), maxDistY = -(DBL_MAX - 1);
+    //	for (int k = 0; k<ds; ++k) {
+    //		for (int j = 0; j<ds; ++j) {
+    //			if (i*cDs + j >= 0 && i*cDs + j<mPrevLayers.size() && k*cDs + k >= 0 && i*cDs + k<mPrevLayers.size()) {
+    //				maxDistX = max(maxDistX, abs(mPrevLayers[i*cDs + j][0].x - mPrevLayers[i*cDs + k][0].x));
+    //				maxDistY = max(maxDistY, abs(mPrevLayers[i*cDs + j][0].y - mPrevLayers[i*cDs + k][0].y));
+    //			}
+    //		}
+    //	}
+
+    //	bool horz = maxDistX >= maxDistY;
+    //	for (int point = 0; point<1; ++point) {
+    //		xs.clear();
+    //		ys.clear();
+
+    //		for (int j = -3; j<ds + 3; ++j) {
+    //			if (i*cDs + j >= 0 && i*cDs + j<mPrevLayers.size()) {
+    //				xs.push_back(mPrevLayers[i*cDs + j][point].x);
+    //				ys.push_back(mPrevLayers[i*cDs + j][point].y);
+    //			}
+    //		}
+    //		lsm::QuadFunc func;
+    //		if (horz) {
+    //			func.build(xs.begin(), ys.begin(), xs.size());
+    //			for (int j = 0; j<ds; ++j) {
+    //				mPrevLayers[i*cDs + j][point].y = func(mPrevLayers[i*cDs + j][point].x);
+    //			}
+    //		}
+    //		else {
+    //			func.build(ys.begin(), xs.begin(), xs.size());
+    //			for (int j = 0; j<ds; ++j) {
+    //				mPrevLayers[i*cDs + j][point].x = func(mPrevLayers[i*cDs + j][point].y);
+    //			}
+    //		}
+
+    //	}
+
+    //BUILD:
+    //	for (int j = 0; j<ds; ++j) {
+    //		vector<vec2i> base = mPrevLayers[i*cDs + j];
+    //		vector<vec3i> ellipse = toFormEllipse(base);
+    //		data()->meshes().back()->addLayer(ellipse);
+    //		if (usingTexturing) {
+    //			vector<vec2d> tex = defTexCoord(ellipse, base);
+    //			data()->meshes().back()->addTexCoords(tex);
+    //		}
+    //	}
+    //}
+
+    recreate(mesh, anchor_points);
+  }
+
+  void CylindricalModelCreator::smoothWithAveraging(Mesh::HardPtr mesh) {
+    auto anchor_points = mesh->anchor_points;
+    for (int i = 1; i<mesh->anchor_points.size() - 1; ++i) {
+      auto prev = mesh->anchor_points[i - 1];
+      auto cur = mesh->anchor_points[i];
+      auto next = mesh->anchor_points[i + 1];
+
+      QVector<vec2i> base(3);
+      base[0] = vec2i((prev[0].x + cur[0].x + next[0].x) / 3, cur[0].y);
+      base[1] = vec2i((prev[1].x + cur[1].x + next[1].x) / 3, cur[1].y);
+      base[2] = vec2i((prev[2].x + cur[2].x + next[2].x) / 3, cur[2].y);
+
+      anchor_points[i] = base;
+    }
+
+    recreate(mesh, anchor_points);
   }
 
   void CylindricalModelCreator::place(Mesh::HardPtr mesh, int radius) {
@@ -184,7 +300,7 @@ namespace rn {
     toSpecify(prev_layers_.back());
 
     auto ellipse = createLayerPoints(prev_layers_.back());
-    current_mesh_->addLayer(ellipse.toStdVector());
+    current_mesh_->addLayer(ellipse);
 
     data_->setFirstLayer(createEllipseByThreePoints(prev_layers_.front()));
 
@@ -231,7 +347,7 @@ namespace rn {
     points_mover_->move(points);
   }
 
-  std::vector<vec2d> CylindricalModelCreator::defTexCoord(QVector<vec3i> src, const QVector<vec2i>& base) {
+  QVector<vec2d> CylindricalModelCreator::defTexCoord(QVector<vec3i> src, const QVector<vec2i>& base) {
     vec2i offset = data_->screenCenter() - data_->offsets;
     auto axis = vec3d((base[0] - base[1]).to<double>(), ProjectionPlane::OXY, 0).normalize();
 
@@ -242,7 +358,7 @@ namespace rn {
       e = (e.to<double>()*transform).to<int>() + center;
     }
 
-    std::vector<vec2d> uv;
+    QVector<vec2d> uv;
     int T = src.size() / 2;
     uv.reserve(src.size());
     for (int i = 0; i<src.size(); ++i) {
@@ -333,7 +449,7 @@ namespace rn {
     Mesh::HardPtr mesh(new Mesh());
     for (auto layer : layers) {
       auto ellipse = createLayerPoints(layer);
-      mesh->addLayer(ellipse.toStdVector());
+      mesh->addLayer(ellipse);
 
       if (using_texturing != "") {
         auto uv = defTexCoord(ellipse, layer);
@@ -342,7 +458,8 @@ namespace rn {
     }
 
     mesh->updateNormals();
-    current_mesh_->texture_id = data_->texture();
+    mesh->anchor_points = layers;
+    mesh->texture_id = data_->texture();
     return mesh;
   }
 
