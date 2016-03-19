@@ -72,7 +72,7 @@ private:
   void createMenuView();
   void createMenuFile();
 
-  void changeStateOfTriangleButtons();
+  void onSelectionChange();
 
   void askAboutSaving();
 
@@ -108,6 +108,7 @@ private slots:
   void slotMouseReleaseEvent(QMouseEvent* event);
   void slotBeforeNewModelCreating();
   void slotMirrorSelectedMeshes();
+  void slotUniteSelectedMeshes();
 
   void slotInterruptCreatingProcess();
   void slotResetOtherButtons();

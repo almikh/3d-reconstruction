@@ -122,10 +122,31 @@ vec3i Mesh::center() const {
   return createAABB<int>(vertices.begin(), vertices.end()).center();
 }
 
-double Mesh::dist(const Mesh& other) const {
+double Mesh::dist(const Mesh& other, bool by_covers) const {
+  QVector<vec3i> verts[2];
+  if (!by_covers) {
+    verts[0] = vertices;
+    verts[1] = other.vertices;
+  }
+  else {
+    // первый и последний слои
+    auto last_layer = layers_.last();
+    auto first_layer = layers_.first();
+    verts[0].reserve((last_layer.second - last_layer.first) + (first_layer.second - first_layer.first));
+    for (int i = first_layer.first; i < first_layer.second; ++i) verts[0] << vertices[i];
+    for (int i = last_layer.first; i < last_layer.second; ++i) verts[0] << vertices[i];
+
+    // первый и последний слои other
+    auto last_layer2 = other.layers_.last();
+    auto first_layer2 = other.layers_.first();
+    verts[1].reserve((last_layer2.second - last_layer2.first) + (first_layer2.second - first_layer2.first));
+    for (int i = first_layer2.first; i < first_layer2.second; ++i) verts[1] << other.vertices[i];
+    for (int i = last_layer2.first; i < last_layer2.second; ++i) verts[1] << other.vertices[i];
+  }
+
   double dist = Double::max();
-  for (auto& e1 : vertices) {
-    for (auto& e2 : other.vertices) {
+  for (auto& e1 : verts[0]) {
+    for (auto& e2 : verts[1]) {
       dist = std::min(dist, e1.dist(e2));
     }
   }
@@ -135,11 +156,8 @@ double Mesh::dist(const Mesh& other) const {
 
 bool Mesh::fallsInto(const QRect& rect) const {
   for (auto& group : anchor_points) {
-    for (auto& e : group) {
-      if (rect.contains(QPoint(e.x, e.y))) {
-        return true;
-      }
-    }
+    if (rect.contains(QPoint(group[0].x, group[0].y))) return true;
+    if (rect.contains(QPoint(group[1].x, group[1].y))) return true;
   }
 
   return false;

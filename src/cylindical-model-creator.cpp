@@ -17,8 +17,6 @@ Q_DECL_NOEXCEPT_EXPR(noexcept(qHash(key.x, seed)) && noexcept(qHash(key.y, seed)
 }
 
 namespace rn {
-  int CylindricalModelCreator::min_available_distance = 32;
-
   CylindricalModelCreator::CylindricalModelCreator():
     clicks_counter_(0),
     points_mover_(new DefaultPointsMover()),
@@ -27,20 +25,20 @@ namespace rn {
 
   }
 
-  void CylindricalModelCreator::setPointsMover(const QString& mode) {
-    if (mode == "Normal") {
+  void CylindricalModelCreator::setPointsMover(const CreatingMode& mode) {
+    ModelCreator::setPointsMover(mode);
+    if (mode == Normal) {
       points_mover_.reset(new DefaultPointsMover());
       if (data_) {
         updateMover();
       }
     }
-    else if (mode == "Symmetrically") {
+    else { // if (mode == Symmetrically)
       points_mover_.reset(new SymmetricPointsMover());
       if (data_) {
         updateMover();
       }
     }
-    else Q_ASSERT(false);
   }
 
   void CylindricalModelCreator::recreate(Mesh::HardPtr mesh, const QVector<QVector<vec2i>>& anchor_points) {
@@ -51,7 +49,7 @@ namespace rn {
       auto ellipse = createLayerPoints(layer);
       new_mesh->addLayer(ellipse);
 
-      if (using_texturing != "") {
+      if (using_texturing) {
         auto uv = defTexCoord(ellipse, layer);
         new_mesh->addTexCoords(uv);
       }
@@ -207,41 +205,16 @@ namespace rn {
         }
       }
       else {
-        //if (smooth == RN_SMOOTH_USING_ABERAGING) smoothUsingAveraging();
-        //else if (smooth == RN_SMOOTH_USING_LSM) smoothUsingLSM(16);
-
         emit signalBeforeNewModelCreating();
 
+        current_mesh_->texture_id = data_->texture();
         current_mesh_->anchor_points = prev_layers_;
         current_mesh_->updateNormals();
 
-        goToOverview();
-        if (merge_models && !data_->meshes.isEmpty()) {
-          for (;;) {
-            // first - меш, second - минимальное расстояние между ним и current_mesh_
-            QPair<Mesh::HardPtr, double> target = qMakePair(nullptr, Double::max());
-            for (auto mesh : data_->meshes) {
-              double distance = mesh->dist(*current_mesh_);
-              if (distance < target.second && distance < min_available_distance) {
-                target.first = mesh;
-                target.second = distance;
-              }
-            }
-
-            if (target.first == nullptr) { // нечего объединять
-              data_->addMesh(current_mesh_);
-              break;
-            }
-
-            data_->meshes.removeOne(target.first);
-            current_mesh_ = Mesh::unite(target.first, current_mesh_);
-          }
-        }
-
-        current_mesh_->texture_id = data_->texture();
-
         data_->addMesh(current_mesh_);
         current_mesh_.reset();
+
+        goToOverview();
       }
     }
   }
@@ -363,11 +336,11 @@ namespace rn {
     uv.reserve(src.size());
     for (int i = 0; i<src.size(); ++i) {
       vec3d e;
-      if (using_texturing == "Mirror") { // это если отражать зеркально
+      if (texturing_mode == Mirror) { // это если отражать зеркально
         e = (src[i] - center).to<double>() * 0.98 + center.to<double>();
 
       }
-      else if (using_texturing == "Cyclically") {  // это если продолжать циклически
+      else if (texturing_mode == Cyclically) { // это если продолжать циклически
         if (src[i].z >= 0) {
           e = (src[i] - center).to<double>() * 0.98 + center.to<double>();
         }
@@ -451,7 +424,7 @@ namespace rn {
       auto ellipse = createLayerPoints(layer);
       mesh->addLayer(ellipse);
 
-      if (using_texturing != "") {
+      if (using_texturing) {
         auto uv = defTexCoord(ellipse, layer);
         mesh->addTexCoords(uv);
       }

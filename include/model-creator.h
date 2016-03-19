@@ -15,14 +15,26 @@ namespace rn {
   class ModelCreator: public QObject {
     Q_OBJECT
 
+  public:
+    enum TexturingMode {
+      Mirror,
+      Cyclically
+    };
+
+    enum CreatingMode {
+      Normal,
+      Symmetrically
+    };
+
   protected:
     vec2i mouse_;
     QMap<Qt::MouseButton, bool> buttons_;
     rn::Session::HardPtr data_; // данные текущей сессии
 
   public:
-    QString using_texturing; // текстурировать ли создаваемую модель (режим)
-    bool merge_models; // "склеивать" близкие модели
+    int creating_mode;
+    int texturing_mode;
+    bool using_texturing; // текстурировать ли создаваемую модель (режим)
 
   public:
     ModelCreator();
@@ -30,7 +42,7 @@ namespace rn {
 
     std::shared_ptr<rn::Session> data() const;
     void setSessionData(std::shared_ptr<rn::Session> data);
-    virtual void setPointsMover(const QString& mode);
+    virtual void setPointsMover(const CreatingMode& mode);
 
     virtual void OnInterruptRequest();
     virtual void onMouseMove(int x, int y);

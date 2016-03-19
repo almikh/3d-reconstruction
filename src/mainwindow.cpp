@@ -81,7 +81,7 @@ MainWindow::MainWindow(QWidget* parent) :
   connect(tools_->cursor, &QPushButton::clicked, [=](bool checked) {
     if (!checked) {
       session_->selected_meshes.clear();
-      changeStateOfTriangleButtons();
+      onSelectionChange();
     }
   });
 
@@ -212,10 +212,11 @@ void MainWindow::createCreatingToolbar() {
   creating_toolbar_.mode = new QComboBox(this);
   creating_toolbar_.mode->setFont(QFont("Arial", 13));
   creating_toolbar_.mode->setFixedWidth(128);
-  creating_toolbar_.mode->addItems({ "Normal", "Symmetrically" });
+  creating_toolbar_.mode->addItems({ ru("По-умолчанию"), ru("Симметрично") });
   creating_toolbar_.toolbar->addWidget(creating_toolbar_.mode);
-  connect(creating_toolbar_.mode, &QComboBox::currentTextChanged, [=](const QString& type) {
-    model_creator_->setPointsMover(type);
+  connect(creating_toolbar_.mode, &QComboBox::currentTextChanged, [=](const QString&) {
+    auto mode = (rn::ModelCreator::CreatingMode)creating_toolbar_.mode->currentIndex();
+    model_creator_->setPointsMover(mode);
   });
 
   creating_toolbar_.toolbar->addSeparator();
@@ -228,6 +229,7 @@ void MainWindow::createCreatingToolbar() {
 
   creating_toolbar_.copy = creating_toolbar_.toolbar->addAction(QIcon("icons/copy.png"), ru("Создать копию"));
   creating_toolbar_.copy->setShortcut(QKeySequence("CTRL+C"));
+  creating_toolbar_.copy->setEnabled(false);
   connect(creating_toolbar_.copy, &QAction::triggered, [=]() {
     if (session_) {
       for (auto mesh : session_->selected_meshes) {
@@ -239,10 +241,8 @@ void MainWindow::createCreatingToolbar() {
   creating_toolbar_.toolbar->addSeparator();
 
   creating_toolbar_.unite_meshes = creating_toolbar_.toolbar->addAction(QIcon("icons/unite.png"), ru("Объединять ближайшие модели"));
-  creating_toolbar_.unite_meshes->setCheckable(true);
-  connect(creating_toolbar_.unite_meshes, &QAction::triggered, [=](bool checked) {
-    model_creator_->merge_models = checked;
-  });
+  connect(creating_toolbar_.unite_meshes, &QAction::triggered, this, &MainWindow::slotUniteSelectedMeshes);
+  creating_toolbar_.unite_meshes->setEnabled(false);
 
   creating_toolbar_.toolbar->addSeparator();
 
@@ -250,22 +250,22 @@ void MainWindow::createCreatingToolbar() {
   creating_toolbar_.texturing->setCheckable(true);
   connect(creating_toolbar_.texturing, &QAction::triggered, [=](bool checked) {
     creating_toolbar_.texturing_mode->setEnabled(checked);
+    model_creator_->using_texturing = checked;
     if (checked) {
-      model_creator_->using_texturing = creating_toolbar_.texturing_mode->currentText();
-    }
-    else {
-      model_creator_->using_texturing = "";
+      auto mode = creating_toolbar_.texturing_mode->currentIndex();
+      model_creator_->texturing_mode = mode;
     }
   });
 
   creating_toolbar_.texturing_mode = new QComboBox(this);
   creating_toolbar_.texturing_mode->setFont(QFont("Arial", 13));
   creating_toolbar_.texturing_mode->setFixedWidth(100);
-  creating_toolbar_.texturing_mode->addItems({ "Mirror", "Cyclically" });
+  creating_toolbar_.texturing_mode->addItems({ ru("Зеркально"), ru("Циклически") });
   creating_toolbar_.texturing_mode->setEnabled(false);
   creating_toolbar_.toolbar->addWidget(creating_toolbar_.texturing_mode);
-  connect(creating_toolbar_.texturing_mode, &QComboBox::currentTextChanged, [=](const QString& text) {
-    model_creator_->using_texturing = text;
+  connect(creating_toolbar_.texturing_mode, &QComboBox::currentTextChanged, [=](const QString&) {
+    auto mode = creating_toolbar_.texturing_mode->currentIndex();
+    model_creator_->texturing_mode = mode;
   });
 
   creating_toolbar_.toolbar->addSeparator();
@@ -362,14 +362,18 @@ void MainWindow::createMenuFile() {
   connect(quit, &QAction::triggered, qApp, &QApplication::quit);
 }
 
-void MainWindow::changeStateOfTriangleButtons() {
+void MainWindow::onSelectionChange() {
   if (!session_->selected_meshes.isEmpty()) {
+    creating_toolbar_.copy->setEnabled(true);
     creating_toolbar_.mirror->setEnabled(true);
+    creating_toolbar_.unite_meshes->setEnabled(true);
     tools_->triangle_last_layer->setEnabled(true);
     tools_->triangle_first_layer->setEnabled(true);
   }
   else {
+    creating_toolbar_.copy->setEnabled(false);
     creating_toolbar_.mirror->setEnabled(false);
+    creating_toolbar_.unite_meshes->setEnabled(false);
     tools_->triangle_last_layer->setEnabled(false);
     tools_->triangle_first_layer->setEnabled(false);
   }
@@ -385,13 +389,8 @@ void MainWindow::openImage(const QString& filename) {
   viewport_->setSession(session_);
   model_creator_->setSessionData(session_);
 
-  model_creator_->merge_models = creating_toolbar_.unite_meshes->isChecked();
-  if (creating_toolbar_.texturing->isChecked()) {
-    model_creator_->using_texturing = creating_toolbar_.texturing_mode->currentText();
-  }
-  else {
-    model_creator_->using_texturing = "";
-  }
+  model_creator_->texturing_mode = creating_toolbar_.texturing_mode->currentIndex();
+  model_creator_->using_texturing = creating_toolbar_.texturing->isCheckable();
 
   viewport_->updateGL();
 }
@@ -489,7 +488,7 @@ void MainWindow::slotChangeCreatingMode(bool checked) {
     askAboutSaving();
   }
 
-  changeStateOfTriangleButtons();
+  onSelectionChange();
   viewport_->updateGL();
 }
 
@@ -518,7 +517,7 @@ void MainWindow::slotMousePressEvent(QMouseEvent* event) {
         viewport_->selected_area.push_back(pos);
       }
       else {
-        changeStateOfTriangleButtons();
+        onSelectionChange();
       }
 
       viewport_->updateGL();
@@ -605,7 +604,7 @@ void MainWindow::slotMouseReleaseEvent(QMouseEvent* event) {
           }
         }
 
-        changeStateOfTriangleButtons();
+        onSelectionChange();
 
         viewport_->selected_area.clear();
         viewport_->updateGL();
@@ -647,30 +646,63 @@ void MainWindow::slotBeforeNewModelCreating() {
 }
 
 void MainWindow::slotMirrorSelectedMeshes() {
-  if (session_) {
-    QList<Mesh::HardPtr> changed_meshes; // нужно для механизма UNDO
-    int symmetry_axis = 0; // если мешей несколько, то отражать будем по средней оси
-    if (session_->selected_meshes.size() > 1) {
-      for (auto mesh : session_->selected_meshes) {
-        symmetry_axis += mesh->center().x;
-      }
+  if (!session_) return;
 
-      symmetry_axis /= session_->selected_meshes.size();
-    }
-
+  QList<Mesh::HardPtr> changed_meshes; // нужно для механизма UNDO
+  int symmetry_axis = 0; // если мешей несколько, то отражать будем по средней оси
+  if (session_->selected_meshes.size() > 1) {
     for (auto mesh : session_->selected_meshes) {
-      auto new_mesh = mesh->clone();
-      session_->meshes.removeOne(mesh);
-
-      new_mesh->mirror(symmetry_axis);
-      changed_meshes.push_back(new_mesh);
-      session_->meshes.push_back(new_mesh);
+      symmetry_axis += mesh->center().x;
     }
 
-    // теперь выделенными являются обновленные меши
-    session_->selected_meshes = changed_meshes;
-    viewport_->updateGL();
+    symmetry_axis /= session_->selected_meshes.size();
   }
+
+  for (auto mesh : session_->selected_meshes) {
+    auto new_mesh = mesh->clone();
+    session_->meshes.removeOne(mesh);
+
+    new_mesh->mirror(symmetry_axis);
+    changed_meshes.push_back(new_mesh);
+    session_->meshes.push_back(new_mesh);
+  }
+
+  // теперь выделенными являются обновленные меши
+  session_->selected_meshes = changed_meshes;
+  viewport_->updateGL();
+}
+
+void MainWindow::slotUniteSelectedMeshes() {
+  if (!session_) return;
+  if (session_->selected_meshes.size() <= 1) return;
+
+  // сливаем все выбранные меши в один (первым и последним слоями сливаем)
+  while (session_->selected_meshes.size() > 1) {
+    double min_dist = Double::max();
+    QPair<Mesh::HardPtr, Mesh::HardPtr> targets;
+    for (auto e1 : session_->selected_meshes) {
+      for (auto e2 : session_->selected_meshes) {
+        if (e1 == e2) continue;
+
+        auto dist = e1->dist(*e2, true);
+        if (dist < min_dist) {
+          min_dist = dist;
+          targets = qMakePair(e1, e2);
+        }
+      }
+    }
+
+    session_->meshes.removeOne(targets.first);
+    session_->meshes.removeOne(targets.second);
+    session_->selected_meshes.removeOne(targets.first);
+    session_->selected_meshes.removeOne(targets.second);
+
+    auto new_mesh = Mesh::unite(targets.first, targets.second);
+    session_->selected_meshes.push_back(new_mesh);
+    session_->addMesh(new_mesh);
+  }
+
+  viewport_->updateGL();
 }
 
 void MainWindow::slotInterruptCreatingProcess() {

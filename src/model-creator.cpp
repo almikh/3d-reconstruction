@@ -2,8 +2,9 @@
 
 namespace rn {
   ModelCreator::ModelCreator():
-    using_texturing(""),
-    merge_models(false)
+    using_texturing(false),
+    creating_mode(Normal),
+    texturing_mode(Mirror)
   {
 
   }
@@ -20,9 +21,8 @@ namespace rn {
     data_ = data;
   }
 
-  void ModelCreator::setPointsMover(const QString& mode) {
-		Q_UNUSED(mode);
-    Q_ASSERT(false);
+  void ModelCreator::setPointsMover(const CreatingMode& mode) {
+    creating_mode = mode;
   }
 
   void ModelCreator::OnInterruptRequest() {

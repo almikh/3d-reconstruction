@@ -37,12 +37,9 @@ namespace rn {
     QVector<vec2i> createEllipseByThreePoints(const QVector<vec2i>& points);
 
   public:
-    static int min_available_distance;
-    // int smooth;
-
     CylindricalModelCreator();
 
-    void setPointsMover(const QString& mode) override;
+    void setPointsMover(const CreatingMode& mode) override;
 
     void smoothWithLSM(Mesh::HardPtr mesh, int ds);
     void smoothWithAveraging(Mesh::HardPtr mesh);
