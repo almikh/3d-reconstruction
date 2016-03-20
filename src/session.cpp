@@ -58,11 +58,11 @@ namespace rn {
   }
 
   void Session::setLastLayer(const QVector<vec2i>& layer) {
-    last_layer = layer;
+    last_layer = layer.toList();
   }
 
   void Session::setFirstLayer(const QVector<vec2i>& layer) {
-    first_layer = layer;
+    first_layer = layer.toList();
   }
 
   int Session::width() const {

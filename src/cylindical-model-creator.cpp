@@ -7,15 +7,6 @@
 #include <aabb.h>
 #include <lsm.h>
 
-template <>
-inline uint qHash(const vec2i& key, uint seed)
-Q_DECL_NOEXCEPT_EXPR(noexcept(qHash(key.x, seed)) && noexcept(qHash(key.y, seed)))
-{
-  uint h1 = qHash(key.x, seed);
-  uint h2 = qHash(key.y, seed);
-  return ((h1 << 16) | (h1 >> 16)) ^ h2 ^ seed;
-}
-
 namespace rn {
   CylindricalModelCreator::CylindricalModelCreator():
     clicks_counter_(0),
@@ -159,10 +150,13 @@ namespace rn {
   void CylindricalModelCreator::place(Mesh::HardPtr mesh, int radius) {
     const int dx[] = { -1, 0, 1, 1, 1, 0, -1, -1 };
     const int dy[] = { -1, -1, -1, 0, 1, 1, 1, 0 };
-    QSet<vec2i> shifts = { vec2i(0, 0) };
+    QList<vec2i> shifts = { vec2i(0, 0) };
     for (int r = 1; r <= radius; ++r) {
       for (int i = 0; i < 8; ++i) {
-        shifts.insert(vec2i(dx[i] * r, dy[i] * r));
+          auto p = vec2i(dx[i] * r, dy[i] * r);
+          if (!shifts.contains(p)) {
+              shifts << p;
+          }
       }
     }
 
@@ -449,7 +443,6 @@ namespace rn {
     Q_ASSERT(key_points.size() == 3);
     Q_ASSERT(data_);
 
-    auto axis = vec3d((key_points[0] - key_points[1]).to<double>(), ProjectionPlane::OXY, 0).normalize();
     vec3i center((key_points[0] + key_points[1]) / 2, ProjectionPlane::OXY);
     int a = (key_points[0] - key_points[1]).length() / 2;
 

@@ -22,7 +22,7 @@ namespace rn {
 
   private:
     QGLWidget* parent_;
-    QVector<QVector<Mesh::HardPtr>> backups_;
+    QVector<QList<Mesh::HardPtr>> backups_;
 
     GLuint texture_;
     GLuint gvf_texture_;
@@ -38,10 +38,10 @@ namespace rn {
     std::shared_ptr<ip::Image<double>> gvf;
     std::shared_ptr<ip::Image<double>> gvf_dir;
 
-    QVector<Mesh::HardPtr> meshes;
+    QList<Mesh::HardPtr> meshes;
 
-    QVector<vec2i> first_layer;
-    QVector<vec2i> last_layer;
+    QList<vec2i> first_layer;
+    QList<vec2i> last_layer;
 
   public:
     QList<Mesh::HardPtr> selected_meshes;

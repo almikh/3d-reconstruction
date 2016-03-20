@@ -6,6 +6,8 @@
 
 #include <vec3.h>
 
+#undef minor
+
 template<class T, int dim>
 class matrix {
 protected:
@@ -65,7 +67,7 @@ private:
         if (permutations) ++(*permutations);
       }
 
-      /*облуляем стоящие ниже диагонального*/
+      /* обнуляем стоящие ниже диагонального */
       for (int j = k + 1; j<dim; ++j) {
         double mn = double(at(j, k)) / at(k, k);
         for (int s = 0; s<dim; ++s) {
@@ -190,8 +192,8 @@ public:
     int num_row;
     for (int k = 0; k < dim - 1; ++k) {
       num_row = k;
-      while (abs(temp[num_row][k]) < numeric_limits<double>::epsilon() && num_row < dim - 1) ++num_row;
-      if (abs(temp[num_row][k]) > numeric_limits<double>::epsilon()) {
+      while (abs(temp[num_row][k]) < Double::epsilon() && num_row < dim - 1) ++num_row;
+      if (abs(temp[num_row][k]) > Double::epsilon()) {
         swap(temp[k], temp[num_row]);
         for (int j = k + 1; j < dim; ++j) {
           double mn = temp[j][k] / temp[k][k];
@@ -202,7 +204,7 @@ public:
 
     std::array<T, dim> dst;
     for (int i = dim - 1; i >= 0; --i) {
-      if (std::abs(temp[i][i]) > numeric_limits<double>::epsilon()) {
+      if (std::abs(temp[i][i]) > Double::epsilon()) {
         dst[i] = temp[i][dim];
         for (int j = dim - 1; j > i; --j) dst[i] -= dst[j] * temp[i][j];
         dst[i] /= temp[i][i];
@@ -212,9 +214,9 @@ public:
     return dst;
   }
 
-  /* ВОзвращает значение соответствующего минора матрицы */
+  /* Возвращает значение соответствующего минора матрицы */
   T minor(int row, int col) {
-    rnMatrix<T, dim - 1> dst;
+    matrix<T, dim - 1> dst;
     for (int i = 0, ii = 0; i<dim; ++i, ++ii) {
       if (i == row) --ii;
       else {
@@ -224,12 +226,13 @@ public:
         }
       }
     }
+
     return dst.det();
   }
 
   /* Возвращает определитель матрицы */
   T det() const {
-    rnMatrix<T, dim> temp(*this);
+    matrix<T, dim> temp(*this);
     int permut;
     temp.toUpperTriang(&permut);
     T dst = 1;

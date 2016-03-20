@@ -129,9 +129,9 @@ public:
   }
   inline vec2<T> proj(ProjectionPlane plane) const {
     switch (plane) {
-    case OXY: return projXY();
-    case OYZ: return projYZ();
-    case OXZ: return projXZ();
+    case ProjectionPlane::OXY: return projXY();
+    case ProjectionPlane::OYZ: return projYZ();
+    case ProjectionPlane::OXZ: return projXZ();
     }
     return vec2<T>();
   }

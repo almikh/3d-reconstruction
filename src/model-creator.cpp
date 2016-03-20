@@ -2,9 +2,9 @@
 
 namespace rn {
   ModelCreator::ModelCreator():
-    using_texturing(false),
     creating_mode(Normal),
-    texturing_mode(Mirror)
+    texturing_mode(Mirror),
+    using_texturing(false)
   {
 
   }

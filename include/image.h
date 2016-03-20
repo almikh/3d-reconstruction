@@ -10,6 +10,9 @@
 #include <vec2.h>
 
 namespace ip {
+  const int dx[] = { -1, 0, 1, 1, 1, 0, -1, -1 };
+  const int dy[] = { -1, -1, -1, 0, 1, 1, 1, 0 };
+
   struct Size {
     int width, height;
 
@@ -28,8 +31,15 @@ namespace ip {
 
   template<typename T>
   class Image {
-    T* data_;
-    int width_, height_;
+    T* data_ = nullptr;
+    int width_ = 0, height_ = 0;
+
+    int normalize(int index, int limit) {
+        if (index < 0) index += limit;
+        else if (index >= limit) index -= limit;
+
+        return index;
+    }
 
     void recreate(int width, int height, const T& val = T()) {
       if (width_ * height_ != width * height) {
@@ -523,7 +533,7 @@ namespace ip {
     }
 
     Image<T>& medianBlur(int radius) {
-      *this = convolution(matd::averaging(radius));
+      *this = convolution(Image<double>::makeAveragingKernel(radius));
       return *this;
     }
 
@@ -554,7 +564,7 @@ namespace ip {
             variance[k] = 1.0 / n*variance[k] - medium[k] * medium[k];
           }
 
-          int target = min_element(variance, variance + 4) - variance; //ptr. diff
+          int target = std::min_element(variance, variance + 4) - variance; //ptr. diff
           at(i, j) = static_cast<T>(medium[target]);
         }
       }
@@ -565,13 +575,13 @@ namespace ip {
     Image<T>& laplace(int mode = 4) {
       switch (mode) {
       case 4:
-        *this = convolution(matd::makeLaplace4Kernel()).scale(0.0, 255.0);
+        *this = convolution(Image<double>::makeLaplace4Kernel()).scale(0.0, 255.0);
         break;
       case 8:
-        *this = convolution(matd::makeLaplace8Kernel()).scale(0.0, 255.0);
+        *this = convolution(Image<double>::makeLaplace8Kernel()).scale(0.0, 255.0);
         break;
       case 12:
-        *this = convolution(matd::makeLaplace12Kernel()).scale(0.0, 255.0);
+        *this = convolution(Image<double>::makeLaplace12Kernel()).scale(0.0, 255.0);
         break;
       }
 
@@ -583,31 +593,34 @@ namespace ip {
         return std::sqrt(fx*fx + fy*fy);
       };
 
-      *this = gradient(matd::makeSobelKernel(), modulus).scale(0.0, 255.0);
+      *this = gradient(Image<double>::makeSobelKernel(), modulus).scale(0.0, 255.0);
       return *this;
     }
 
     Image<T>& kirsh() {
-      matd src(to<double>());
+        const int dx[] = { 0, 1, 0, -1, 1, 1, -1, -1 };
+        const int dy[] = { -1, 0, 1, 0, -1, 1, 1, -1 };
+
+      Image<double> src(to<double>());
       for (int i = 1; i < width_ - 1; ++i) {
         for (int j = 1; j < height_ - 1; ++j) {
-          int F = 0;
+          int f = 0;
           for (int ind = 0; ind < 8; ++ind) {
-            int S = 0, T = 0;
+            int s = 0, t = 0;
             for (int k = 0; k < 3; ++k) {
               int index = normalize(k + ind, 8);
-              S += src(i + ip::cdx[index], j + ip::cdy[index]);
+              s += src(i + ip::dx[index], j + ip::dy[index]);
             }
 
             for (int k = 3; k < 8; ++k) {
               int index = normalize(k + ind, 8);
-              T += src(i + ip::cdx[index], j + ip::cdy[index]);
+              t += src(i + ip::dx[index], j + ip::dy[index]);
             }
 
-            F = std::max(F, abs(5 * S - 3 * T));
+            f = std::max(f, abs(5 * s - 3 * t));
           }
 
-          at(i, j) = F;
+          at(i, j) = f;
         }
       }
 
@@ -643,7 +656,7 @@ namespace ip {
       }
 
       /* Compute parameters and initializing arrays */
-      matd b(f.size()), c1(f.size()), c2(f.size());
+      Image<double> b(f.size()), c1(f.size()), c2(f.size());
       for (int i = 0; i < width(); ++i) {
         for (int j = 0; j < height(); ++j) {
           b(i, j) = math::sqr(u(i, j)) + math::sqr(v(i, j));
@@ -653,7 +666,7 @@ namespace ip {
       }
 
       /* Solve GVF = (u,v) */
-      matd Lu(size()), Lv(size());
+      Image<double> Lu(size()), Lv(size());
       for (int it = 0; it < iters; ++it) {
         /* corners */
         int n = width() - 1;

@@ -2,6 +2,7 @@
 #define DEFS_H_INCLUDED__
 
 #include <stdint.h>
+#include <type_traits>
 #include <limits>
 
 using Int = std::numeric_limits<int>;

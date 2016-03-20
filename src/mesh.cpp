@@ -444,9 +444,9 @@ void Mesh::removeLayer(int index) {
   auto layer = layers_[index];
 
   auto removedTri = [&layer](const Trid& tri) {
-    return layer.first <= tri[0] && tri[0]<layer.second ||
-        layer.first <= tri[1] && tri[1]<layer.second ||
-        layer.first <= tri[2] && tri[2]<layer.second;
+    return (layer.first <= tri[0] && tri[0]<layer.second) ||
+        (layer.first <= tri[1] && tri[1]<layer.second) ||
+        (layer.first <= tri[2] && tri[2]<layer.second);
   };
 
   triangles.erase(std::remove_if(triangles.begin(), triangles.end(), removedTri), triangles.end());

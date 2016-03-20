@@ -22,9 +22,9 @@ namespace rn
   /* Viewport */
   Viewport::Viewport(QWidget* parent) :
     QGLWidget(QGLFormat(QGL::DoubleBuffer | QGL::DepthBuffer | QGL::Rgba), parent),
-    trackball(new Trackball(/*Trackball::VerticalInverse*/)),
+    hide_image(false),
     show_force_field(false),
-    hide_image(false)
+    trackball(new Trackball(/*Trackball::VerticalInverse*/))
   {
     setMouseTracking(true);
     setAutoBufferSwap(false);
