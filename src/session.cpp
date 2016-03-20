@@ -10,8 +10,9 @@ namespace rn {
   {
     Q_ASSERT(parent_);
 
-    image = image.scaled(MIN_SCENE_WIDTH * 0.85, MIN_SCENE_HEIGHT * 0.85, Qt::KeepAspectRatio);
-    //image_ = image_.convertToFormat(QImage::Format_RGB888);
+    if (image.width() > MIN_SCENE_WIDTH * 0.85 || image.height() > MIN_SCENE_HEIGHT * 0.85) {
+      image = image.scaled(MIN_SCENE_WIDTH * 0.85, MIN_SCENE_HEIGHT * 0.85, Qt::KeepAspectRatio);
+    }
 
     ip::Image<double> source(image);
     ip::Image<double> u(source.size()), v(source.size());

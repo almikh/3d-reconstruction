@@ -61,7 +61,7 @@ public:
   Mesh& move(const vec3i& diff);
 
   vec3i center() const;
-  double dist(const Mesh& other, bool by_covers = true) const; // by_covers = true: расстояние между первым и последним слоями мешей, иначе по всем точкам
+  double dist(const Mesh& other, bool by_covers = false) const; // by_covers = true: расстояние между первым и последним слоями мешей, иначе по всем точкам
   bool fallsInto(const QRect& rect) const; // область модели пересекается с указанным прямоугольником
   bool contains(const QPoint& point) const; // точка лежит в границах модели
 

@@ -2,6 +2,8 @@
 #include <QtOpenGL>
 #include <fstream>
 #include <aabb.h>
+#include <mesh.h>
+#include <defs.h>
 
 #define TOP_VERT_INDEX			-1
 #define BOTTOM_VERT_INDEX		-2
@@ -147,7 +149,7 @@ double Mesh::dist(const Mesh& other, bool by_covers) const {
   double dist = Double::max();
   for (auto& e1 : verts[0]) {
     for (auto& e2 : verts[1]) {
-      dist = std::min(dist, e1.dist(e2));
+      dist = std::min(dist, e1.projXY().dist(e2.projXY()));
     }
   }
 
@@ -155,9 +157,8 @@ double Mesh::dist(const Mesh& other, bool by_covers) const {
 }
 
 bool Mesh::fallsInto(const QRect& rect) const {
-  for (auto& group : anchor_points) {
-    if (rect.contains(QPoint(group[0].x, group[0].y))) return true;
-    if (rect.contains(QPoint(group[1].x, group[1].y))) return true;
+  for (auto& v : vertices) {
+    if (rect.contains(QPoint(v.x, v.y))) return true;
   }
 
   return false;
@@ -166,11 +167,13 @@ bool Mesh::fallsInto(const QRect& rect) const {
 bool Mesh::contains(const QPoint& point) const {
   int n = anchor_points.size();
   for (int i = 0; i < n - 1; ++i) {
-    int x = qMin(anchor_points[i][0].x, anchor_points[i][1].x);
-    int y = qMin(anchor_points[i][0].y, anchor_points[i][1].y);
-    int width = qAbs(anchor_points[i][0].x - anchor_points[i][1].x);
-    int height = qAbs(anchor_points[i][0].y - anchor_points[i + 1][0].y); // расстояние между слоями
-    if (QRect(x, y, width, height).contains(point)) {
+    QPolygon polygon;
+    polygon << QPoint(anchor_points[i][0].x, anchor_points[i][0].y);
+    polygon << QPoint(anchor_points[i][1].x, anchor_points[i][1].y);
+    polygon << QPoint(anchor_points[i + 1][1].x, anchor_points[i + 1][1].y);
+    polygon << QPoint(anchor_points[i + 1][0].x, anchor_points[i + 1][0].y);
+
+    if (polygon.containsPoint(point, Qt::FillRule::OddEvenFill)) {
       return true;
     }
   }

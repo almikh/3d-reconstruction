@@ -211,7 +211,7 @@ void MainWindow::createCreatingToolbar() {
 
   creating_toolbar_.mode = new QComboBox(this);
   creating_toolbar_.mode->setFont(QFont("Arial", 13));
-  creating_toolbar_.mode->setFixedWidth(128);
+  creating_toolbar_.mode->setFixedWidth(136);
   creating_toolbar_.mode->addItems({ ru("По-умолчанию"), ru("Симметрично") });
   creating_toolbar_.toolbar->addWidget(creating_toolbar_.mode);
   connect(creating_toolbar_.mode, &QComboBox::currentTextChanged, [=](const QString&) {
@@ -222,7 +222,7 @@ void MainWindow::createCreatingToolbar() {
   creating_toolbar_.toolbar->addSeparator();
 
   creating_toolbar_.mirror = creating_toolbar_.toolbar->addAction(QIcon("icons/mirror.png"), ru("Отразить по-горизонтали"));
-  creating_toolbar_.mirror->setShortcut(QKeySequence("CTRL+C"));
+  creating_toolbar_.mirror->setShortcut(QKeySequence("CTRL+M"));
   creating_toolbar_.mirror->setEnabled(false);
   connect(creating_toolbar_.mirror, &QAction::triggered, this, &MainWindow::slotMirrorSelectedMeshes);
   creating_toolbar_.toolbar->addSeparator();
@@ -259,7 +259,7 @@ void MainWindow::createCreatingToolbar() {
 
   creating_toolbar_.texturing_mode = new QComboBox(this);
   creating_toolbar_.texturing_mode->setFont(QFont("Arial", 13));
-  creating_toolbar_.texturing_mode->setFixedWidth(100);
+  creating_toolbar_.texturing_mode->setFixedWidth(128);
   creating_toolbar_.texturing_mode->addItems({ ru("Зеркально"), ru("Циклически") });
   creating_toolbar_.texturing_mode->setEnabled(false);
   creating_toolbar_.toolbar->addWidget(creating_toolbar_.texturing_mode);
@@ -313,7 +313,7 @@ void MainWindow::createMovingToolbar() {
 }
 
 void MainWindow::createMenuView() {
-  auto menu = menuBar()->addMenu("View");
+  auto menu = menuBar()->addMenu(ru("Вид"));
 
   auto show_settings = menu->addAction(ru("Инструменты"));
   show_settings->setIcon(QIcon("icons/main-toolbar.png"));
@@ -340,7 +340,7 @@ void MainWindow::createMenuView() {
 }
 
 void MainWindow::createMenuFile() {
-  auto menu = menuBar()->addMenu("File");
+  auto menu = menuBar()->addMenu(ru("Файл"));
 
   menu_file_.open = menu->addAction(ru("Открыть"));
   menu_file_.open->setIcon(QIcon("icons/folder.png"));
@@ -390,7 +390,7 @@ void MainWindow::openImage(const QString& filename) {
   model_creator_->setSessionData(session_);
 
   model_creator_->texturing_mode = creating_toolbar_.texturing_mode->currentIndex();
-  model_creator_->using_texturing = creating_toolbar_.texturing->isCheckable();
+  model_creator_->using_texturing = creating_toolbar_.texturing->isChecked();
 
   viewport_->updateGL();
 }
@@ -658,6 +658,7 @@ void MainWindow::slotMirrorSelectedMeshes() {
     symmetry_axis /= session_->selected_meshes.size();
   }
 
+  slotBeforeNewModelCreating();
   for (auto mesh : session_->selected_meshes) {
     auto new_mesh = mesh->clone();
     session_->meshes.removeOne(mesh);
@@ -676,6 +677,8 @@ void MainWindow::slotUniteSelectedMeshes() {
   if (!session_) return;
   if (session_->selected_meshes.size() <= 1) return;
 
+  slotBeforeNewModelCreating();
+
   // сливаем все выбранные меши в один (первым и последним слоями сливаем)
   while (session_->selected_meshes.size() > 1) {
     double min_dist = Double::max();
@@ -684,7 +687,7 @@ void MainWindow::slotUniteSelectedMeshes() {
       for (auto e2 : session_->selected_meshes) {
         if (e1 == e2) continue;
 
-        auto dist = e1->dist(*e2, true);
+        auto dist = e1->dist(*e2);
         if (dist < min_dist) {
           min_dist = dist;
           targets = qMakePair(e1, e2);

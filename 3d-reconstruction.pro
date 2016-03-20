@@ -10,7 +10,7 @@ SOURCES += \
 	src/main.cpp \ 
 	src/viewport.cpp \
 	src/mainwindow.cpp \
-        src/tools-widget.cpp \
+	src/tools-widget.cpp \
 	src/any.cpp \
 	src/mesh.cpp \
 	src/algebra.cpp \
@@ -38,7 +38,6 @@ HEADERS += \
 	include/plain.h \
 	include/triang.h \
 	include/triangle.h \
-	include/misc.h \
 	include/mesh.h \
 	include/image.h \
 	include/points-mover.h \
