@@ -419,6 +419,7 @@ QPoint MainWindow::convertToSceneCoord(const QPoint& pos) {
 }
 
 void MainWindow::slotSaveMeshes() {
+  if (!session_) return;
   Mesh::HardPtr common = session_->meshes.first();
   for (int i = 1; i < session_->meshes.size(); ++i) {
     common = Mesh::merge(common, session_->meshes[i]);
@@ -434,6 +435,7 @@ void MainWindow::slotSaveMeshes() {
 }
 
 void MainWindow::slotSaveEachMeshes() {
+  if (!session_) return;
   for (int i = 0; i < session_->meshes.size(); ++i) {
     QString default_dir = "/";
     auto caption = ru("Сохранить модель #%1 как:").arg(i);
