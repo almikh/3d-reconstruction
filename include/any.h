@@ -66,7 +66,7 @@ public:
     Holder<ValueType>* holder = dynamic_cast<Holder<ValueType>*>(content_);
     if (holder) return holder->data;
 
-    Q_ASSERT_X(holder != nullptr, "any", "error cast to " + typeid(ValueType).name());
+    Q_ASSERT_X(holder != nullptr, "any", (std::string("error cast to ") + typeid(ValueType).name()).c_str());
     return holder->mData;
   }
 };
