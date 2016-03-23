@@ -28,6 +28,9 @@ Win32/
 *.so
 *.dylib
 *.dll
+!bin/*.dll
+!bin/platforms/*.dll
+!bin/imageformats/*.dll
 
 # Compiled Static libraries
 *.lai

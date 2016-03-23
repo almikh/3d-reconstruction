@@ -37,6 +37,7 @@ ToolsWidget::ToolsWidget(QWidget* parent) :
   smooth->setToolTip("Hand mode");
   smooth->setFixedSize(48, 48);
   layout->addWidget(smooth);
+  smooth->setEnabled(false);
 
   triangle_first_layer = new QPushButton(QIcon("icons/last-layer.png"), "", this);
   triangle_first_layer->setToolTip("Triangulate last layer");
