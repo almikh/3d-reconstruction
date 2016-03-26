@@ -43,7 +43,7 @@ private:
   matrix<T, dim>& swapRows(int l1, int l2) {
     if (l1 == l2) return *this;
     for (auto j = 0; j<dim; ++j) {
-      swap(at(l1, j), at(l2, j));
+      std::swap(at(l1, j), at(l2, j));
     }
 
     return *this;

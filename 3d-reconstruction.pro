@@ -35,7 +35,7 @@ HEADERS += \
 	include/algebra.h \
 	include/lsm.h \
 	include/line.h \
-	include/plain.h \
+	include/plane.h \
 	include/triang.h \
 	include/triangle.h \
 	include/mesh.h \

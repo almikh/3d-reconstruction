@@ -4,6 +4,7 @@
 #include <aabb.h>
 #include <mesh.h>
 #include <defs.h>
+#include <plane.h>
 
 #define TOP_VERT_INDEX			-1
 #define BOTTOM_VERT_INDEX		-2
@@ -221,7 +222,7 @@ Mesh::HardPtr Mesh::unite(const Mesh::HardPtr& first, const Mesh::HardPtr& secon
   dst->vertices << second->vertices;
 
   dst->triangles << first->triangles;
-  dst->triangles << triangles_copy;;
+  dst->triangles << triangles_copy;
 
   dst->tex_coord << first->tex_coord;
   dst->tex_coord << second->tex_coord;
@@ -229,35 +230,11 @@ Mesh::HardPtr Mesh::unite(const Mesh::HardPtr& first, const Mesh::HardPtr& secon
   dst->anchor_points << first->anchor_points;
   dst->anchor_points << second->anchor_points;
 
-  auto reverse_insert = [](QVector<layer_t>& dst, const QVector<layer_t>& src) {
-    for (int i = src.size() - 1; i >= 0; --i) {
-      dst.push_back(src[src.size() - 1 - i]);
-    }
-  };
-
-  if (near_layers.first == 0) {
-    // для первого - слои в обратном порядке
-    reverse_insert(dst->layers_, first->layers_);
-    if (near_layers.second == 0) {
-      dst->layers_ << layers_copy;
-    }
-    else {
-      // для второго - слои в обратном порядке
-      reverse_insert(dst->layers_, layers_copy);
-    }
-  }
-  else {
-    reverse_insert(dst->layers_, first->layers_);
-    if (near_layers.second == 0) {
-      dst->layers_ << layers_copy;
-    }
-    else {
-      reverse_insert(dst->layers_, layers_copy);
-    }
-  }
+  dst->layers_ << first->layers_;
+  dst->layers_ << layers_copy;
 
   // промежуточная часть между моделями - нужно ее триангулировать
-  dst->triangleLayers(dst->layers_[first->layers_.size() - 1], dst->layers_[first->layers_.size()]);
+  dst->triangleLayers(first->layers_[near_layers.first], layers_copy[near_layers.second]);
   dst->updateNormals();
   return dst;
 }
@@ -302,34 +279,28 @@ Mesh::HardPtr Mesh::merge(const Mesh::HardPtr& first, const Mesh::HardPtr& secon
 }
 
 QPair<int, int> Mesh::findNearestLayers(const Mesh& first, const Mesh& second) {
-  QVector<int> first_covers;
-  auto back_layer_1 = first.layers_.back();
-  auto front_layer_1 = first.layers_.front();
-  for (int i = front_layer_1.first; i < front_layer_1.second; ++i) first_covers.push_back(i);
-  for (int i = back_layer_1.first; i < back_layer_1.second; ++i) first_covers.push_back(i);
+  QVector<int> first_covers, second_covers; // индексы слоев
+  first_covers << first.outLayers().first;
+  first_covers << first.outLayers().second;
+  second_covers << second.outLayers().first;
+  second_covers << second.outLayers().second;
 
-  std::vector<int> second_covers;
-  auto back_layer_2 = second.layers_.back();
-  auto front_layer_2 = second.layers_.front();
-  for (int i = front_layer_2.first; i < front_layer_2.second; ++i) second_covers.push_back(i);
-  for (int i = back_layer_2.first; i < back_layer_2.second; ++i) second_covers.push_back(i);
-
-  int f_ind = 0, s_ind = 0;
+  QPair<int, int> dst = { 0, 0 };
   double min_dist = Double::max();
-  for (int i = 0, n = first_covers.size(); i<n; ++i) {
-    for (int j = 0, m = second_covers.size(); j < m; ++j) {
-      double dist = first.vertices[i].dist(second.vertices[j]);
+  for (auto i : first_covers) {
+    // будем сравнивать расстояния между центрами слоев
+    auto first_center = first.layerCenter(first.layers_[i]);
+    for (auto j : second_covers) {
+      auto second_center = second.layerCenter(second.layers_[j]);
+      double dist = first_center.dist(second_center);
       if (dist < min_dist) {
         min_dist = dist;
-        f_ind = i;
-        s_ind = j;
+        dst.first = i;
+        dst.second = j;
       }
     }
   }
 
-  QPair<int, int> dst;
-  dst.first = first.getLayer(f_ind);
-  dst.second = second.getLayer(s_ind);
   return dst;
 }
 
@@ -393,20 +364,78 @@ void Mesh::updateNormals() {
   update_for(bottom_cover.triangles, true);
 }
 
+vec3d Mesh::layerCenter(const layer_t& layer) const {
+  auto begin = vertices.begin();
+  auto layer_aabb = createAABB<int>(begin + layer.first, begin + layer.second);
+  return layer_aabb.center();
+}
+
+QPair<int, int> Mesh::outLayers() const {
+  QPair<int, int> out_layers = { 0, 0 };
+  QPair<int, int> out_layers_price = { Int::max(), Int::min() }; // вспомогательная переменная, оценивает можность слоя
+  for (int i = 0; i < layers_.size(); ++i) {
+    auto layer = layers_[i];
+    if (layer.second - layer.first < 3) continue;
+
+    auto f = vec3i(vert(layer.first)).to<double>();
+    auto s = vec3i(vert(layer.first + 1)).to<double>();
+    auto ray_start = layerCenter(layer);
+
+    if (f.dist(ray_start) < 2.5 && f.dist(s) < 2.5 && s.dist(ray_start) < 2.5) {
+      // то это слой, в котором точки практически слиты в одну
+      continue;
+    }
+
+    Plane<double> plane(f, s, ray_start);
+    vec3d ray_normal = plane.normal().normalize();
+
+    int counter[2] = { 0, 0 }; // сколько плоскостей пересекает нормаль и инверированная нормаль текущего слоя
+    for (auto other : layers_) {
+      if (other == layer) continue;
+      if (other.second - other.first < 3) continue;
+
+      auto f = vec3i(vert(other.first)).to<double>();
+      auto s = vec3i(vert(other.first + 1)).to<double>();
+      auto t = layerCenter(other);
+
+      if (f.dist(t) < 2.5 && f.dist(s) < 2.5 && s.dist(t) < 2.5) {
+        continue; // очень `плотный` слой
+      }
+
+      Plane<double> other_plane(f, s, t);
+      if (other_plane.intersect(ray_start, ray_normal)) counter[0] += 1;
+      if (other_plane.intersect(ray_start, ray_normal * -1.0)) counter[1] += 1;
+    }
+
+    int price = counter[0] - counter[1];
+    if (price < out_layers_price.first) {
+      out_layers_price.first = price;
+      out_layers.first = i;
+    }
+
+    if (price > out_layers_price.second) {
+      out_layers_price.second = price;
+      out_layers.second = i;
+    }
+  }
+
+  if (layerCenter(layers_[out_layers.first]).y > layerCenter(layers_[out_layers.second]).y) {
+    std::swap(out_layers.first, out_layers.second);
+  }
+
+  return out_layers;
+}
+
 void Mesh::triangulateLastLayer() {
   top_cover.need_triangulate = true;
 
-  auto l = layers_.back();
-  auto aabb = createAABB<int>(
-        vertices.begin() + l.first,
-        vertices.begin() + l.second);
-
-  top_cover.vertex = aabb.center(); // точка схода вершин последнего слоя
+  auto layer = layers_[outLayers().second];
+  top_cover.vertex = layerCenter(layer); // точка схода вершин последнего слоя
   top_cover.triangles.clear();
 
   // третий индекс - фиктивный, вместо него будет bottom_cover.first
-  top_cover.triangles.push_back(Trid(l.second - 1, l.first, TOP_VERT_INDEX));
-  for (int i = l.first; i < l.second - 1; ++i) {
+  top_cover.triangles.push_back(Trid(layer.second - 1, layer.first, TOP_VERT_INDEX));
+  for (int i = layer.first; i < layer.second - 1; ++i) {
     top_cover.triangles.push_back(Trid(i, i + 1, TOP_VERT_INDEX));
   }
 
@@ -416,17 +445,13 @@ void Mesh::triangulateLastLayer() {
 void Mesh::triangulateFirstLayer() {
   bottom_cover.need_triangulate = true;
 
-  auto l = layers_.front();
-  auto aabb = createAABB<int>(
-        vertices.begin() + l.first,
-        vertices.begin() + l.second);
-
-  bottom_cover.vertex = aabb.center(); // точка схода вершин последнего слоя
+  auto layer = layers_[outLayers().first];
+  bottom_cover.vertex = layerCenter(layer); // точка схода вершин первого слоя
   bottom_cover.triangles.clear();
 
   // третий индекс - фиктивный, вместо него будет top_cover.first
-  bottom_cover.triangles.push_back(Trid(l.second - 1, l.first, BOTTOM_VERT_INDEX));
-  for (int i = l.first; i < l.second - 1; ++i) {
+  bottom_cover.triangles.push_back(Trid(layer.second - 1, layer.first, BOTTOM_VERT_INDEX));
+  for (int i = layer.first; i < layer.second - 1; ++i) {
     bottom_cover.triangles.push_back(Trid(i, i + 1, BOTTOM_VERT_INDEX));
   }
 

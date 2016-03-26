@@ -30,6 +30,7 @@ private:
   vec2d& tex(int index);
   const vec2d& tex(int index) const;
 
+  vec3d layerCenter(const layer_t& layer) const; // возвращает точку - центр слоя
   static QPair<int, int> findNearestLayers(const Mesh& first, const Mesh& second);
 
 public:
@@ -71,6 +72,8 @@ public:
   const vec3i& operator[](int index) const;
 
   void updateNormals();
+
+  QPair<int, int> outLayers() const; // первый и последний слои (по расположению, а не нумерации)
 
   void triangulateLastLayer();
   void triangulateFirstLayer();
