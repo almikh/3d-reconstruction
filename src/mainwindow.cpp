@@ -145,14 +145,14 @@ void MainWindow::showEvent(QShowEvent* event) {
 }
 
 void MainWindow::keyPressEvent(QKeyEvent* event) {
-  if (!event->isAutoRepeat() && event->key() == Qt::Key_H) { // временно скрывать изображение при отображении в окне
+  if (show_image_->isChecked() && !event->isAutoRepeat() && event->key() == Qt::Key_H) { // временно скрывать изображение при отображении в окне
     viewport_->hide_image = true;
     viewport_->updateGL();
   }
 }
 
 void MainWindow::keyReleaseEvent(QKeyEvent* event) {
-  if (!event->isAutoRepeat() && event->key() == Qt::Key_H) {
+  if (show_image_->isChecked() && !event->isAutoRepeat() && event->key() == Qt::Key_H) {
     viewport_->hide_image = false;
     viewport_->updateGL();
   }
@@ -198,6 +198,13 @@ void MainWindow::createMainToolbar() {
 
   main_toolbar_.save = main_toolbar_.toolbar->addAction(QIcon("icons/save.png"), ru("Сохранить полученные модели"));
   connect(main_toolbar_.save, SIGNAL(triggered()), SLOT(slotSaveMeshes()));
+
+  main_toolbar_.toolbar->addSeparator();
+
+  main_toolbar_.screenshot = main_toolbar_.toolbar->addAction(QIcon("icons/screenshot.png"), ru("Сохранить сцену в файл"));
+  connect(main_toolbar_.screenshot, SIGNAL(triggered()), SLOT(slotMakeScreenshot()));
+
+  main_toolbar_.toolbar->addSeparator();
 
   main_toolbar_.undo = main_toolbar_.toolbar->addAction(QIcon("icons/undo.png"), ru("Отменить последнее действие"));
   connect(main_toolbar_.undo, SIGNAL(triggered()), SLOT(slotUndoLastAction()));
@@ -337,6 +344,17 @@ void MainWindow::createMenuView() {
     viewport_->show_force_field = checked;
     viewport_->updateGL();
   });
+
+  show_image_ = menu->addAction(ru("Показать изображение"));
+  show_image_->setIcon(QIcon("icons/show-image.png"));
+  show_image_->setShortcut(QKeySequence("CTRL+S"));
+  show_image_->setCheckable(true);
+  show_image_->setChecked(true);
+
+  connect(show_image_, &QAction::triggered, [=](bool checked) {
+    viewport_->hide_image = !checked;
+    viewport_->updateGL();
+  });
 }
 
 void MainWindow::createMenuFile() {
@@ -381,6 +399,8 @@ void MainWindow::onSelectionChange() {
 
 void MainWindow::openImage(const QString& filename) {
   tools_->create->setChecked(true);
+  viewport_->hide_image = false;
+  show_image_->setChecked(true);
 
   viewport_->makeCurrent();
   session_.reset(new rn::Session(QImage(filename), viewport_));
@@ -432,6 +452,15 @@ void MainWindow::slotSaveMeshes() {
 
   if (!path.endsWith(".obj")) path += ".obj";
   common->saveAsObj(path.toLocal8Bit().data());
+}
+
+void MainWindow::slotMakeScreenshot() {
+  QString default_dir = "/";
+  auto caption = ru("Сохранить скриншот как:");
+  auto filename = QFileDialog::getSaveFileName(this, caption, default_dir, ru("Формат PNG (*.png);;"));
+  if (!filename.isEmpty()) {
+    viewport_->makeScreenshot(filename);
+  }
 }
 
 void MainWindow::slotSaveEachMeshes() {

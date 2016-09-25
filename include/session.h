@@ -12,8 +12,8 @@
 #include <image.h>
 
 class QGLWidget;
-#define MIN_SCENE_HEIGHT	600
-#define MIN_SCENE_WIDTH		900
+#define MIN_SCENE_HEIGHT	768
+#define MIN_SCENE_WIDTH		1024
 
 namespace rn {
   struct Session {

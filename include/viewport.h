@@ -52,6 +52,8 @@ namespace rn
 
     void setSession(rn::Session::HardPtr session);
 
+    void makeScreenshot(const QString& filename);
+
     void initializeGL() override;
     void resizeGL(int width, int height) override;
     void paintGL() override;

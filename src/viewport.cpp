@@ -158,6 +158,32 @@ namespace rn
     session_->offsets.x = (scene_size_.width() - session_->width()) / 2;
     session_->offsets.y = (scene_size_.height() - session_->height()) / 2;
   }
+  
+  void Viewport::makeScreenshot(const QString& filename) {
+    if (!session_) return;
+
+    auto old_hide_image = hide_image;
+    auto old_selected_area = selected_area;
+    selected_area.clear();
+    hide_image = true;
+
+    updateGL();
+
+    int width = session_->width(), height = session_->height();
+    uint8_t* buffer = new uint8_t[width * height * 3];
+    glPixelStorei(GL_PACK_ALIGNMENT, 0);
+    struct { GLint x, y, w, h; } rect;
+    glGetIntegerv(GL_VIEWPORT, (GLint*)&rect);
+		glReadPixels(session_->offsets.x, session_->offsets.y, width, height, GL_RGB, GL_UNSIGNED_BYTE, buffer);
+		//glReadPixels(0, 0, scene_size_.width(), scene_size_.height(), GL_RGB, GL_UNSIGNED_BYTE, buffer);
+    QImage image(buffer, width, height, QImage::Format::Format_RGB888);
+		image.mirrored().save(filename);
+
+    hide_image = old_hide_image;
+    selected_area = old_selected_area;
+
+    updateGL();
+  }
 
   void Viewport::initializeGL() {
     QGLWidget::initializeGL();

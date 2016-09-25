@@ -42,3 +42,7 @@ Win32/
 *.exe
 *.out
 *.app
+3d-reconstruction.vcxproj.filters
+3d-reconstruction.vcxproj
+bin/settings.ini
+diploma.pdf

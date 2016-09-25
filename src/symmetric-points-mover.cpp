@@ -11,6 +11,11 @@ void SymmetricPointsMover::move(QVector<vec2i>& points)  {
   points[0] += offset_ + rn::round(growth_dir_ * growth_length_).to<int>();
   points[1] += offset_ + rn::round(growth_dir_ * growth_length_).to<int>();
 
+	if (points[0].x < 0) points[0].x = 0;
+	if (points[0].y < 0) points[0].y = 0;
+	if (points[1].x < 0) points[1].x = 0;
+	if (points[1].y < 0) points[1].y = 0;
+
   auto get_price = [&](const vec2i& first, const vec2i& second) {
     return grad_->at(first) + grad_->at(second);
   };

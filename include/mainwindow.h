@@ -29,6 +29,8 @@ private:
   QList<vec3i> shifts_; // сдвиги, используются для перемещения моделей мышкой
   QPoint prev_mouse_; // предыдущие координаты мыши
 
+	QAction* show_image_;
+
   struct {
     QAction* open;
     QAction* save;
@@ -38,6 +40,7 @@ private:
 
   struct {
     QToolBar* toolbar;
+    QAction* screenshot;
     QAction* open;
     QAction* save;
     QAction* undo;
@@ -97,6 +100,7 @@ public:
 private slots:
   void slotOpenImage();
   void slotSaveMeshes();
+  void slotMakeScreenshot();
   void slotSaveEachMeshes();
   void slotUndoLastAction();
 
